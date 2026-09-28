@@ -26,7 +26,7 @@ diagnosed and fixed, are in [docs/PHASE_3_REPORT.md](docs/PHASE_3_REPORT.md) and
 
 ## Architecture and Dataset
 
-- **Dataset**: [FER2013](https://www.kaggle.com/datasets/msambare/fer2013) — 35,887
+- **Dataset**: [FER2013](https://www.kaggle.com/datasets/deadskull7/fer2013) — 35,887
   48x48 grayscale images across 7 emotion classes (Angry, Disgust, Fear, Happy, Sad,
   Surprise, Neutral), with the official Training/PublicTest/PrivateTest split.
 - **Model**: `EmotionCNNImproved` — three Conv+BatchNorm+ReLU+MaxPool blocks, plus
@@ -65,7 +65,9 @@ py -3.11 -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Download the `fer2013.csv` dataset and place it at `data/fer2013.csv`.
+Download the dataset from Kaggle —
+[deadskull7/fer2013](https://www.kaggle.com/datasets/deadskull7/fer2013) — and place
+the CSV at `data/fer2013.csv`.
 
 > Note: the default Windows console does not support UTF-8. Run every script with
 > `PYTHONIOENCODING=utf-8` so console output prints correctly.
