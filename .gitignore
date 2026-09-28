@@ -21,6 +21,7 @@ Thumbs.db
 
 # Claude Code local session files
 .claude/
+CLAUDE.md
 
 # logs
 *.log
