@@ -105,11 +105,16 @@ def get_dataloaders(csv_path="data/fer2013.csv", batch_size=64, num_workers=0, a
     return train_loader, val_loader, test_loader
 
 
-def get_class_weights(csv_path="data/fer2013.csv"):
+def get_class_weights(csv_path="data/fer2013.csv", smooth=False):
     """
     وزن هر کلاس متناسب با عکس فراوانی آن در train، برای جبران عدم توازن کلاس‌ها
     (مثلاً Disgust حدود ۱۶ برابر کمتر از Happy نمونه دارد).
-    فرمول: weight_c = تعداد_کل / (تعداد_کلاس‌ها * تعداد_نمونه‌ی کلاس c)
+    فرمول پایه: weight_c = تعداد_کل / (تعداد_کلاس‌ها * تعداد_نمونه‌ی کلاس c)
+
+    smooth=True: از جذر وزن‌های بالا استفاده می‌کند (weight_c ** 0.5). وزن خام برای
+    Disgust حدود 9.4 است که می‌تواند gradient را بیش‌ازحد به سمت یک کلاس کوچک بکشاند
+    و باعث underfitting شود؛ جذر آن اثر را ملایم‌تر می‌کند (حدود 3.07) و در آزمایش‌ها
+    نتیجه‌ی پایدارتری داد.
     """
     df = pd.read_csv(csv_path)
     train_df = df[df["Usage"] == "Training"]
@@ -117,6 +122,8 @@ def get_class_weights(csv_path="data/fer2013.csv"):
     total = len(train_df)
     num_classes = len(counts)
     weights = total / (num_classes * counts)
+    if smooth:
+        weights = weights ** 0.5
     return torch.tensor(weights.values, dtype=torch.float32)
 
 

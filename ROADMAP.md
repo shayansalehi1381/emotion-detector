@@ -30,15 +30,15 @@
 - [x] `docs/PHASE_2_REPORT.md`
 
 ## فاز ۳ — بهبود مدل
-- [ ] افزودن BatchNorm
-- [ ] افزودن Dropout
-- [ ] Data augmentation (flip, rotation, ...)
-- [ ] LR scheduler
-- [ ] وزن‌دهی کلاس‌ها (class weighting) به‌خاطر عدم توازن FER2013
-- [ ] Early stopping
-- [ ] جدول مقایسه‌ی آزمایش‌ها (baseline vs بهبودها) در `results/`
-- [ ] ذخیره‌ی بهترین checkpoint در `checkpoints/`
-- [ ] `docs/PHASE_3_REPORT.md`
+- [x] افزودن BatchNorm
+- [x] افزودن Dropout
+- [x] Data augmentation (flip, rotation, translation)
+- [x] LR scheduler (ReduceLROnPlateau)
+- [x] وزن‌دهی کلاس‌ها (class weighting؛ نسخه‌ی sqrt ملایم‌تر از خام بهتر جواب داد)
+- [x] Early stopping
+- [x] جدول مقایسه‌ی آزمایش‌ها در `results/experiments_comparison.csv` + نمودار
+- [x] ذخیره‌ی بهترین checkpoint: `checkpoints/best.pt` (val_acc=60.55%)
+- [x] `docs/PHASE_3_REPORT.md`
 
 ## فاز ۴ — ارزیابی
 - [ ] ارزیابی نهایی روی PrivateTest (test set)
@@ -61,4 +61,4 @@
 - [ ] راهنمای ضبط دمو (چگونه یک ویدیو کوتاه از برنامه‌ی زنده ضبط شود)
 
 ## وضعیت فعلی
-فاز ۲ کامل شد (baseline val_acc=56.84%). در حال شروع فاز ۳ (بهبود مدل).
+فاز ۳ کامل شد (بهترین val_acc=60.55% با checkpoints/best.pt). در حال شروع فاز ۴ (ارزیابی).

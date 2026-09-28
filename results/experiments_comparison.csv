@@ -1,0 +1,6 @@
+experiment,best_val_acc,best_epoch,total_epochs_run
+baseline,0.5684034550013931,11,30
++BatchNorm+Dropout,0.5803845082195598,30,30
++Augmentation,0.5550292560601839,36,40
++ClassWeight(raw)+Scheduler,0.4834215658957927,48,58
++ClassWeight(sqrt)+Scheduler,0.6054611312343271,62,70
