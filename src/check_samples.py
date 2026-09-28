@@ -1,0 +1,42 @@
+"""
+تست سلامت داده: چند نمونه از هر کلاس احساسی را از train set نمایش می‌دهد و در
+results/sample_grid.png ذخیره می‌کند. هدف: اطمینان از این‌که بازسازی تصویر از
+رشته‌ی پیکسل درست انجام شده و برچسب‌ها با تصویر همخوانی دارند.
+"""
+
+import matplotlib.pyplot as plt
+
+from dataset import EMOTION_NAMES, FER2013Dataset
+
+N_SAMPLES_PER_CLASS = 5
+
+ds = FER2013Dataset(split="train")
+
+# پیدا کردن N نمونه اول برای هر کلاس
+samples_by_class = {c: [] for c in EMOTION_NAMES}
+for i in range(len(ds)):
+    label = int(ds.df.iloc[i]["emotion"])
+    if len(samples_by_class[label]) < N_SAMPLES_PER_CLASS:
+        samples_by_class[label].append(i)
+    if all(len(v) >= N_SAMPLES_PER_CLASS for v in samples_by_class.values()):
+        break
+
+n_classes = len(EMOTION_NAMES)
+fig, axes = plt.subplots(n_classes, N_SAMPLES_PER_CLASS, figsize=(N_SAMPLES_PER_CLASS * 1.5, n_classes * 1.5))
+
+for row, (label, indices) in enumerate(samples_by_class.items()):
+    for col, idx in enumerate(indices):
+        img, _ = ds[idx]
+        ax = axes[row, col]
+        ax.imshow(img.squeeze(0).numpy(), cmap="gray")
+        ax.axis("off")
+        if col == 0:
+            ax.set_ylabel(EMOTION_NAMES[label], rotation=0, labelpad=40, fontsize=10)
+            ax.axis("on")
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+fig.suptitle("نمونه‌هایی از هر کلاس احساسی (train set)")
+fig.tight_layout()
+fig.savefig("results/sample_grid.png", dpi=120)
+print("نمودار نمونه‌ها ذخیره شد در results/sample_grid.png")
