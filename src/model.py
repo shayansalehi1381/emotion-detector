@@ -48,6 +48,48 @@ class EmotionCNN(nn.Module):
         return x
 
 
+class EmotionCNNImproved(nn.Module):
+    """
+    نسخه‌ی بهبودیافته‌ی EmotionCNN برای فاز ۳: همان معماری سه‌بلوکی، به‌علاوه‌ی
+    BatchNorm بعد از هر Conv (پایدارتر و سریع‌تر کردن آموزش) و Dropout قبل از
+    لایه‌های fully-connected (کاهش overfitting با خاموش کردن تصادفی نورون‌ها در train).
+    """
+
+    def __init__(self, num_classes=NUM_CLASSES, dropout1=0.5, dropout2=0.3):
+        super().__init__()
+
+        self.features = nn.Sequential(
+            nn.Conv2d(1, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2),  # 48 -> 24
+
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2),  # 24 -> 12
+
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2),  # 12 -> 6
+        )
+
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Dropout(dropout1),
+            nn.Linear(128 * 6 * 6, 128),
+            nn.ReLU(inplace=True),
+            nn.Dropout(dropout2),
+            nn.Linear(128, num_classes),
+        )
+
+    def forward(self, x):
+        x = self.features(x)
+        x = self.classifier(x)
+        return x
+
+
 if __name__ == "__main__":
     # تست صحت شکل: آیا خروجی مدل ابعاد درستی دارد؟
     model = EmotionCNN()
@@ -59,3 +101,10 @@ if __name__ == "__main__":
     print(f"ورودی: {dummy_input.shape} -> خروجی: {output.shape}")
     assert output.shape == (4, NUM_CLASSES), "ابعاد خروجی مدل اشتباه است!"
     print("تست شکل خروجی موفق بود.")
+
+    improved = EmotionCNNImproved()
+    n_params_improved = sum(p.numel() for p in improved.parameters())
+    print(f"\nتعداد پارامترهای EmotionCNNImproved: {n_params_improved:,}")
+    out2 = improved(dummy_input)
+    assert out2.shape == (4, NUM_CLASSES)
+    print(f"ورودی: {dummy_input.shape} -> خروجی: {out2.shape}")

@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader, Dataset
+from torchvision import transforms
 
 EMOTION_NAMES = {
     0: "Angry",
@@ -62,17 +63,61 @@ class FER2013Dataset(Dataset):
         return image, label
 
 
-def get_dataloaders(csv_path="data/fer2013.csv", batch_size=64, num_workers=0, transform=None):
-    """سه DataLoader برای train/val/test برمی‌گرداند. فقط train شافل می‌شود."""
-    train_ds = FER2013Dataset(csv_path, split="train", transform=transform)
-    val_ds = FER2013Dataset(csv_path, split="val", transform=transform)
-    test_ds = FER2013Dataset(csv_path, split="test", transform=transform)
+def get_train_transform():
+    """
+    Data augmentation فقط برای train: flip افقی، چرخش کوچک، و جابه‌جایی کوچک.
+    این‌ها تنوع مصنوعی به داده اضافه می‌کنند تا مدل به جزئیات دقیق پیکسل‌ها overfit نشود.
+    زاویه‌ها و جابه‌جایی‌ها عمداً کوچک نگه داشته شده‌اند چون تصویر فقط 48x48 است.
+    """
+    return transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomRotation(10),
+        transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
+        transforms.ToTensor(),  # به [0,1] تبدیل می‌کند و شکل را به (1,H,W) می‌برد
+    ])
+
+
+def get_eval_transform():
+    """برای val/test هیچ augmentation نمی‌خواهیم؛ فقط تبدیل قطعی به تنسور."""
+    return transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.ToTensor(),
+    ])
+
+
+def get_dataloaders(csv_path="data/fer2013.csv", batch_size=64, num_workers=0, augment=False):
+    """
+    سه DataLoader برای train/val/test برمی‌گرداند. فقط train شافل می‌شود.
+    augment=True: روی train از get_train_transform (با augmentation) استفاده می‌کند؛
+    val/test همیشه بدون augmentation ارزیابی می‌شوند (باید قطعی و قابل‌تکرار باشند).
+    """
+    train_transform = get_train_transform() if augment else get_eval_transform()
+
+    train_ds = FER2013Dataset(csv_path, split="train", transform=train_transform)
+    val_ds = FER2013Dataset(csv_path, split="val", transform=get_eval_transform())
+    test_ds = FER2013Dataset(csv_path, split="test", transform=get_eval_transform())
 
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
     return train_loader, val_loader, test_loader
+
+
+def get_class_weights(csv_path="data/fer2013.csv"):
+    """
+    وزن هر کلاس متناسب با عکس فراوانی آن در train، برای جبران عدم توازن کلاس‌ها
+    (مثلاً Disgust حدود ۱۶ برابر کمتر از Happy نمونه دارد).
+    فرمول: weight_c = تعداد_کل / (تعداد_کلاس‌ها * تعداد_نمونه‌ی کلاس c)
+    """
+    df = pd.read_csv(csv_path)
+    train_df = df[df["Usage"] == "Training"]
+    counts = train_df["emotion"].value_counts().sort_index()
+    total = len(train_df)
+    num_classes = len(counts)
+    weights = total / (num_classes * counts)
+    return torch.tensor(weights.values, dtype=torch.float32)
 
 
 if __name__ == "__main__":
@@ -83,6 +128,9 @@ if __name__ == "__main__":
         print(f"{split}: {len(ds)} نمونه | ابعاد تصویر اول: {img.shape} | برچسب اول: {label} ({EMOTION_NAMES[label]})")
 
     # تست DataLoader: یک batch واقعی را می‌گیریم و ابعاد آن را چاپ می‌کنیم
-    train_loader, val_loader, test_loader = get_dataloaders(batch_size=64)
+    train_loader, val_loader, test_loader = get_dataloaders(batch_size=64, augment=True)
     images, labels = next(iter(train_loader))
     print(f"\nیک batch از train_loader: images={images.shape}, labels={labels.shape}")
+
+    weights = get_class_weights()
+    print(f"وزن کلاس‌ها: {weights}")
