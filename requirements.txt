@@ -1,0 +1,18 @@
+# نصب:
+#   py -3.11 -m venv .venv
+#   .venv\Scripts\python.exe -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+#   .venv\Scripts\python.exe -m pip install -r requirements.txt
+#
+# توجه: torch/torchvision با نسخه‌ی CUDA باید از ایندکس مخصوص pytorch نصب شوند (خط بالا)،
+# نه از این فایل، چون pip معمولی نسخه‌ی CPU-only را نصب می‌کند.
+
+torch==2.6.0+cu124
+torchvision==0.21.0+cu124
+numpy==2.4.6
+pandas==3.0.6
+matplotlib==3.11.2
+seaborn==0.13.2
+scikit-learn==1.9.1
+opencv-python==5.0.0.93
+mediapipe==1.0.1
+tqdm==4.70.1

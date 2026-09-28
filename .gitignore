@@ -1,0 +1,26 @@
+# virtual environment
+.venv/
+
+# dataset (حجیم است، جدا نگه‌داری می‌شود)
+data/*.csv
+
+# model checkpoints (حجیم هستند)
+checkpoints/*.pt
+checkpoints/*.pth
+
+# python cache
+__pycache__/
+*.pyc
+
+# jupyter
+.ipynb_checkpoints/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Claude Code local session files
+.claude/
+
+# logs
+*.log
