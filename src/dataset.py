@@ -1,7 +1,8 @@
 """
-کلاس Dataset پای‌تورچ برای FER2013. هر ردیف CSV شامل یک رشته‌ی متنی از ۲۳۰۴ عدد
-(۴۸×۴۸ پیکسل خاکستری) است که اینجا به آرایه‌ی numpy و سپس تنسور تصویر تبدیل می‌شود.
-تقسیم train/val/test از روی ستون Usage انجام می‌شود (تقسیم رسمی خود دیتاست).
+PyTorch Dataset class for FER2013. Each CSV row contains a text string of 2304 numbers
+(48x48 grayscale pixels), which here gets converted to a numpy array and then an image
+tensor. The train/val/test split is taken from the Usage column (the dataset's own
+official split).
 """
 
 import numpy as np
@@ -20,7 +21,7 @@ EMOTION_NAMES = {
     6: "Neutral",
 }
 
-# نگاشت ستون Usage در فایل CSV به نام‌های استاندارد train/val/test
+# Maps the CSV file's Usage column to the standard train/val/test names
 USAGE_MAP = {
     "train": "Training",
     "val": "PublicTest",
@@ -32,13 +33,13 @@ IMG_SIZE = 48
 
 class FER2013Dataset(Dataset):
     """
-    split: یکی از 'train', 'val', 'test'
-    transform: تابع/ترکیب transform های torchvision که روی تصویر PIL یا تنسور اعمال می‌شود
+    split: one of 'train', 'val', 'test'
+    transform: a torchvision transform/composition applied to the PIL image or tensor
     """
 
     def __init__(self, csv_path="data/fer2013.csv", split="train", transform=None):
         if split not in USAGE_MAP:
-            raise ValueError(f"split باید یکی از {list(USAGE_MAP)} باشد, نه {split!r}")
+            raise ValueError(f"split must be one of {list(USAGE_MAP)}, not {split!r}")
 
         df = pd.read_csv(csv_path)
         usage = USAGE_MAP[split]
@@ -50,14 +51,14 @@ class FER2013Dataset(Dataset):
 
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
-        # رشته‌ی "70 80 82 ..." را به آرایه‌ی 48x48 uint8 تبدیل می‌کنیم
+        # Convert the "70 80 82 ..." string into a 48x48 uint8 array
         pixels = np.array(row["pixels"].split(), dtype=np.uint8).reshape(IMG_SIZE, IMG_SIZE)
         label = int(row["emotion"])
 
         if self.transform is not None:
             image = self.transform(pixels)
         else:
-            # پیش‌فرض: تنسور float در بازه‌ی [0, 1] با یک کانال (grayscale)
+            # default: a float tensor in [0, 1] with one channel (grayscale)
             image = torch.from_numpy(pixels).float().unsqueeze(0) / 255.0
 
         return image, label
@@ -65,21 +66,22 @@ class FER2013Dataset(Dataset):
 
 def get_train_transform():
     """
-    Data augmentation فقط برای train: flip افقی، چرخش کوچک، و جابه‌جایی کوچک.
-    این‌ها تنوع مصنوعی به داده اضافه می‌کنند تا مدل به جزئیات دقیق پیکسل‌ها overfit نشود.
-    زاویه‌ها و جابه‌جایی‌ها عمداً کوچک نگه داشته شده‌اند چون تصویر فقط 48x48 است.
+    Data augmentation for train only: horizontal flip, small rotation, and small
+    translation. These add artificial variety to the data so the model doesn't overfit
+    to exact pixel details. Angles and translations are deliberately kept small since
+    the image is only 48x48.
     """
     return transforms.Compose([
         transforms.ToPILImage(),
         transforms.RandomHorizontalFlip(p=0.5),
         transforms.RandomRotation(10),
         transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
-        transforms.ToTensor(),  # به [0,1] تبدیل می‌کند و شکل را به (1,H,W) می‌برد
+        transforms.ToTensor(),  # converts to [0,1] and reshapes to (1,H,W)
     ])
 
 
 def get_eval_transform():
-    """برای val/test هیچ augmentation نمی‌خواهیم؛ فقط تبدیل قطعی به تنسور."""
+    """We don't want any augmentation for val/test; just a deterministic conversion to a tensor."""
     return transforms.Compose([
         transforms.ToPILImage(),
         transforms.ToTensor(),
@@ -88,9 +90,9 @@ def get_eval_transform():
 
 def get_dataloaders(csv_path="data/fer2013.csv", batch_size=64, num_workers=0, augment=False):
     """
-    سه DataLoader برای train/val/test برمی‌گرداند. فقط train شافل می‌شود.
-    augment=True: روی train از get_train_transform (با augmentation) استفاده می‌کند؛
-    val/test همیشه بدون augmentation ارزیابی می‌شوند (باید قطعی و قابل‌تکرار باشند).
+    Returns three DataLoaders for train/val/test. Only train is shuffled.
+    augment=True: uses get_train_transform (with augmentation) for train; val/test are
+    always evaluated without augmentation (they must be deterministic and reproducible).
     """
     train_transform = get_train_transform() if augment else get_eval_transform()
 
@@ -107,14 +109,14 @@ def get_dataloaders(csv_path="data/fer2013.csv", batch_size=64, num_workers=0, a
 
 def get_class_weights(csv_path="data/fer2013.csv", smooth=False):
     """
-    وزن هر کلاس متناسب با عکس فراوانی آن در train، برای جبران عدم توازن کلاس‌ها
-    (مثلاً Disgust حدود ۱۶ برابر کمتر از Happy نمونه دارد).
-    فرمول پایه: weight_c = تعداد_کل / (تعداد_کلاس‌ها * تعداد_نمونه‌ی کلاس c)
+    Weight for each class proportional to its inverse frequency in train, to offset
+    class imbalance (e.g. Disgust has about 16x fewer samples than Happy).
+    Base formula: weight_c = total_count / (num_classes * count of class c)
 
-    smooth=True: از جذر وزن‌های بالا استفاده می‌کند (weight_c ** 0.5). وزن خام برای
-    Disgust حدود 9.4 است که می‌تواند gradient را بیش‌ازحد به سمت یک کلاس کوچک بکشاند
-    و باعث underfitting شود؛ جذر آن اثر را ملایم‌تر می‌کند (حدود 3.07) و در آزمایش‌ها
-    نتیجه‌ی پایدارتری داد.
+    smooth=True: uses the square root of the raw weights (weight_c ** 0.5). The raw
+    weight for Disgust is about 9.4, which can pull the gradient too aggressively
+    toward one small class and cause underfitting; the square root softens that effect
+    (down to about 3.07) and gave a more stable result in experiments.
     """
     df = pd.read_csv(csv_path)
     train_df = df[df["Usage"] == "Training"]
@@ -128,16 +130,16 @@ def get_class_weights(csv_path="data/fer2013.csv", smooth=False):
 
 
 if __name__ == "__main__":
-    # تست سریع صحت: آیا ابعاد و برچسب‌ها منطقی هستند؟
+    # Quick sanity check: are the shapes and labels sensible?
     for split in ["train", "val", "test"]:
         ds = FER2013Dataset(split=split)
         img, label = ds[0]
-        print(f"{split}: {len(ds)} نمونه | ابعاد تصویر اول: {img.shape} | برچسب اول: {label} ({EMOTION_NAMES[label]})")
+        print(f"{split}: {len(ds)} samples | first image shape: {img.shape} | first label: {label} ({EMOTION_NAMES[label]})")
 
-    # تست DataLoader: یک batch واقعی را می‌گیریم و ابعاد آن را چاپ می‌کنیم
+    # DataLoader test: grab a real batch and print its shape
     train_loader, val_loader, test_loader = get_dataloaders(batch_size=64, augment=True)
     images, labels = next(iter(train_loader))
-    print(f"\nیک batch از train_loader: images={images.shape}, labels={labels.shape}")
+    print(f"\nOne batch from train_loader: images={images.shape}, labels={labels.shape}")
 
     weights = get_class_weights()
-    print(f"وزن کلاس‌ها: {weights}")
+    print(f"Class weights: {weights}")

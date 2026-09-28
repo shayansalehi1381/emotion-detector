@@ -1,130 +1,141 @@
-# فاز ۳ — گزارش بهبود مدل
+# Phase 3 — Model Improvement Report
 
-## چه کار کردیم و چرا
+## What we did and why
 
-هدف این فاز بستن شکاف overfitting که در فاز ۲ دیدیم بود (train_acc=97% در برابر
-val_acc=57%). این فاز آموزنده‌ترین بخش پروژه بود چون **نتیجه‌ی اولیه خلاف انتظار بود**
-و مجبور شدیم دلیلش را تشخیص بدهیم و اصلاح کنیم — دقیقاً همان‌طور که در کار واقعی
-یادگیری ماشین پیش می‌آید.
+The goal of this phase was to close the overfitting gap we saw in Phase 2
+(train_acc=97% vs. val_acc=57%). This phase was the most instructive part of the
+project because **the initial result went against expectations**, and we had to
+diagnose the cause and fix it — exactly as happens in real machine learning work.
 
-### تکنیک‌های اضافه‌شده
+### Techniques Added
 
-1. **BatchNorm** (`EmotionCNNImproved` در `src/model.py`): بعد از هر لایه‌ی Conv یک
-   `BatchNorm2d` اضافه شد. خروجی هر لایه را نرمال (میانگین صفر، واریانس یک) می‌کند تا
-   توزیع ورودی لایه‌ی بعدی در طول آموزش کمتر تغییر کند و آموزش پایدارتر/سریع‌تر شود.
-2. **Dropout**: قبل از هر دو لایه‌ی fully-connected (با نرخ ۰.۵ و ۰.۳) اضافه شد. در هر
-   قدم آموزش، درصدی از نورون‌ها به‌صورت تصادفی خاموش می‌شوند تا مدل به یک مسیر خاص
-   وابسته نشود (نوعی ensemble ضمنی).
-3. **Data Augmentation** (`get_train_transform` در `src/dataset.py`): فقط روی train،
-   flip افقی تصادفی، چرخش تا ۱۰ درجه، و جابه‌جایی تا ۱۰٪ تصویر. val/test بدون تغییر
-   (باید قطعی و قابل‌تکرار باشند).
-4. **Class weighting** (`get_class_weights`): چون Disgust حدود ۱۶ برابر کمتر از Happy
-   نمونه دارد، وزن معکوسِ فراوانی به `CrossEntropyLoss` داده شد تا خطای کلاس‌های
-   کم‌نمونه بیشتر در loss اثر بگذارد.
-5. **LR Scheduler** (`ReduceLROnPlateau`): اگر val_loss برای چند epoch بهبود نیابد،
-   نرخ یادگیری نصف می‌شود — کمک می‌کند مدل در انتهای آموزش با قدم‌های ریزتر به کمینه
-   نزدیک‌تر شود.
-6. **Early stopping**: اگر val_accuracy برای `patience` epoch متوالی بهتر نشود،
-   آموزش زودتر متوقف می‌شود (جلوگیری از اتلاف وقت و overfitting بیشتر).
+1. **BatchNorm** (`EmotionCNNImproved` in `src/model.py`): a `BatchNorm2d` was added
+   after every Conv layer. It normalizes each layer's output (zero mean, unit
+   variance) so the next layer's input distribution shifts less during training,
+   making training more stable/faster.
+2. **Dropout**: added before both fully-connected layers (with rates 0.5 and 0.3). At
+   every training step, a fraction of neurons are randomly turned off so the model
+   doesn't become dependent on any one specific path (a kind of implicit ensemble).
+3. **Data Augmentation** (`get_train_transform` in `src/dataset.py`): applied only to
+   train — random horizontal flip, rotation up to 10 degrees, and translation up to
+   10% of the image. val/test are left unchanged (they must be deterministic and reproducible).
+4. **Class weighting** (`get_class_weights`): since Disgust has about 16x fewer samples
+   than Happy, inverse-frequency weights were given to `CrossEntropyLoss` so errors on
+   minority classes affect the loss more.
+5. **LR Scheduler** (`ReduceLROnPlateau`): if val_loss doesn't improve for several
+   epochs, the learning rate is halved — helping the model take finer steps toward a
+   minimum near the end of training.
+6. **Early stopping**: if val_accuracy doesn't improve for `patience` consecutive
+   epochs, training stops early (avoiding wasted time and further overfitting).
 
-### داستان واقعی این فاز: یک نتیجه‌ی غیرمنتظره و تشخیص آن
+### The Real Story of This Phase: An Unexpected Result and Diagnosing It
 
-آزمایش‌ها را پشت سر هم اجرا کردیم (`src/experiments.py`) و نتایج (val accuracy):
+We ran the experiments back to back (`src/experiments.py`) and got these results (val accuracy):
 
-| آزمایش | val accuracy | epoch بهینه |
+| Experiment | val accuracy | best epoch |
 |---|---|---|
-| baseline (فاز ۲) | 56.84% | 11 |
+| baseline (Phase 2) | 56.84% | 11 |
 | +BatchNorm+Dropout | 58.04% | 30 |
 | +Augmentation | 55.50% | 36 |
-| +ClassWeight(خام)+Scheduler | **48.34%** | 48 |
+| +ClassWeight(raw)+Scheduler | **48.34%** | 48 |
 
-آزمایش چهارم (همه‌چیز با هم) به‌جای بهبود، **بدتر از baseline** شد! قبل از نتیجه‌گیری
-عجولانه، به train_acc نگاه کردیم: در بهترین epoch آن آزمایش، train_acc فقط ۳۸.۵٪ بود —
-یعنی برخلاف فاز ۲ (که مشکل overfitting بود)، اینجا مدل حتی روی داده‌ی train هم خوب کار
-نمی‌کرد. این علامت **underfitting** است، نه overfitting.
+The fourth experiment (everything combined), instead of improving, was **worse than
+baseline**! Before jumping to a hasty conclusion, we looked at train_acc: at that
+experiment's best epoch, train_acc was only 38.5% — meaning, unlike Phase 2 (where the
+problem was overfitting), here the model wasn't even doing well on the train data. This
+is a sign of **underfitting**, not overfitting.
 
-**فرضیه:** وزن خام کلاس Disgust (حدود ۹.۴ برابر) خیلی تهاجمی بود. وقتی همزمان با
-augmentation (که خودش کار مدل را سخت‌تر می‌کند) و کاهش سریع نرخ یادگیری
-(`patience=3`) ترکیب شد، مجموع این محدودیت‌ها بیش از ظرفیت مدل و بودجه‌ی epoch بود.
+**Hypothesis:** the raw weight for the Disgust class (about 9.4x) was too aggressive.
+Combined at the same time with augmentation (which itself makes the model's job
+harder) and a fast learning-rate decay (`patience=3`), these combined constraints
+exceeded the model's capacity and epoch budget.
 
-**آزمایش تشخیصی** (`src/final_v2.py`): برای تست فرضیه، وزن کلاس را ملایم‌تر کردیم
-(جذر وزن خام، یعنی Disgust از ۹.۴ به ~۳.۰۷ رسید)، صبر scheduler را از ۳ به ۵ epoch
-افزایش دادیم، و epoch/patience بیشتری دادیم (۷۰ epoch، early-stop patience=۱۵).
+**Diagnostic experiment** (`src/final_v2.py`): to test the hypothesis, we made the
+class weight milder (the square root of the raw weight, so Disgust went from 9.4x to
+~3.07x), increased the scheduler's patience from 3 to 5 epochs, and gave it more
+epochs/patience (70 epochs, early-stop patience=15).
 
-**نتیجه:** val accuracy به **۶۰.۵۵٪** رسید (در epoch ۶۲) — بهترین نتیجه‌ی کل پروژه،
-هم از baseline و هم از همه‌ی آزمایش‌های دیگر بهتر. فرضیه تأیید شد.
+**Result:** val accuracy reached **60.55%** (at epoch 62) — the best result in the
+entire project, beating both the baseline and every other experiment. The hypothesis
+was confirmed.
 
-### جدول نهایی مقایسه
+### Final Comparison Table
 
-| آزمایش | val accuracy | epoch بهینه | تعداد epoch اجراشده |
+| Experiment | val accuracy | best epoch | epochs run |
 |---|---|---|---|
-| baseline (فاز ۲) | 56.84% | 11 | 30 |
+| baseline (Phase 2) | 56.84% | 11 | 30 |
 | +BatchNorm+Dropout | 58.04% | 30 | 30 |
 | +Augmentation | 55.50% | 36 | 40 |
-| +ClassWeight(خام)+Scheduler | 48.34% | 48 | 58 (early stop) |
-| **+ClassWeight(ملایم/sqrt)+Scheduler (نهایی)** | **60.55%** | **62** | 70 |
+| +ClassWeight(raw)+Scheduler | 48.34% | 48 | 58 (early stop) |
+| **+ClassWeight(smooth/sqrt)+Scheduler (final)** | **60.55%** | **62** | 70 |
 
-نمودار میله‌ای: `results/experiments_comparison.png`
-نمودار loss/accuracy مدل نهایی: `results/final_v2_curves.png` — برخلاف baseline فاز ۲،
-اینجا val_accuracy همیشه بالاتر از train_accuracy است (چون train با augmentation سخت‌تر
-شده) و هیچ‌کدام هنوز شروع به واگرایی از هم نکرده‌اند — یعنی مدل هنوز overfit نکرده و
-شاید با epoch بیشتر کمی بهتر هم بشود (نکته‌ای برای کار آینده).
+Bar chart: `results/experiments_comparison.png`
+Loss/accuracy chart for the final model: `results/final_v2_curves.png` — unlike the
+Phase 2 baseline, here val_accuracy is always higher than train_accuracy (since train
+is harder due to augmentation), and neither has started diverging from the other yet —
+meaning the model hasn't overfit yet and might improve slightly further with more
+epochs (a note for future work).
 
-**مدل نهایی انتخاب‌شده برای فاز ۴: `checkpoints/best.pt`** (کپی از `final_v2.pt`,
+**Final model chosen for Phase 4: `checkpoints/best.pt`** (copy of `final_v2.pt`,
 val_accuracy=60.55%)
 
-## مفاهیم جدید (با مثال ساده)
+## New Concepts (with a simple example)
 
-- **BatchNorm**: تصور کنید هر لایه دارد با ورودی‌هایی کار می‌کند که مقیاسشان دائم در
-  حال تغییر است (چون لایه‌های قبلی هم دارند یاد می‌گیرند) — این یادگیری را ناپایدار
-  می‌کند. BatchNorm ورودی هر لایه را در هر batch نرمال می‌کند تا این "هدف متحرک" ثابت‌تر شود.
-- **Dropout**: مثل این‌که در هر تمرین، تصادفی چند نفر از اعضای یک تیم را از بازی بیرون
-  بگذاریم تا تیم یاد نگیرد فقط به یک نفر خاص وابسته باشد؛ در آزمایش نهایی (inference)
-  همه حاضرند و مدل قوی‌تر و تعمیم‌پذیرتر عمل می‌کند.
-- **Underfitting در برابر Overfitting**: overfitting یعنی مدل روی train خیلی خوب و
-  روی val بد عمل می‌کند (حفظ کردن به‌جای یادگیری). underfitting برعکس است: مدل حتی
-  روی train هم خوب عمل نمی‌کند، معمولاً چون محدودیت‌های regularization بیش‌ازحد
-  قوی هستند یا مدل/زمان آموزش کافی نیست. تشخیص این دو با مقایسه‌ی train_acc و val_acc
-  انجام می‌شود، نه فقط نگاه کردن به val_acc به‌تنهایی.
-- **چرا جذر (sqrt) وزن کلاس؟** وزن خام (نسبت مستقیم فراوانی) می‌تواند برای کلاس‌های
-  خیلی کم‌نمونه بیش‌ازحد بزرگ شود و gradient را غالب کند. جذر گرفتن این تفاوت را
-  فشرده‌تر می‌کند (۹.۴ برابر خام در برابر ۳.۰۷ برابر بعد از جذر) — تعادلی بین "توجه
-  بیشتر به کلاس کم‌نمونه" و "عدم بی‌ثبات کردن آموزش".
+- **BatchNorm**: imagine every layer working with inputs whose scale keeps shifting
+  (because earlier layers are also still learning) — this makes learning unstable.
+  BatchNorm normalizes each layer's input within every batch so this "moving target"
+  becomes more stable.
+- **Dropout**: like randomly benching a few team members from practice each time so
+  the team doesn't learn to rely on just one specific player; during the final test
+  (inference) everyone is present, and the model performs stronger and generalizes
+  better.
+- **Underfitting vs. Overfitting**: overfitting means the model does very well on train
+  and poorly on val (memorizing instead of learning). Underfitting is the opposite: the
+  model doesn't even do well on train, usually because regularization constraints are
+  too strong or the model/training time isn't sufficient. Telling these apart is done
+  by comparing train_acc and val_acc, not by looking at val_acc alone.
+- **Why the square root (sqrt) of the class weight?** The raw weight (a direct
+  frequency ratio) can become excessively large for very rare classes and dominate the
+  gradient. Taking the square root compresses this difference (9.4x raw vs. 3.07x after
+  the square root) — a balance between "paying more attention to the rare class" and
+  "not destabilizing training."
 
-## سؤالات احتمالی مصاحبه
+## Likely Interview Questions
 
-**۱. چرا اضافه کردن class weighting در ابتدا نتیجه را بدتر کرد؟**
-چون وزن خام (~۹.۴ برابر برای Disgust) با augmentation و کاهش سریع LR ترکیب شد و
-باعث شد مدل نتواند حتی روی train هم خوب یاد بگیرد (train_acc فقط ~۳۸٪) — یعنی
-underfitting، نه مشکل تعمیم. با ملایم کردن وزن (جذر) و دادن فرصت بیشتر (epoch/patience
-بیشتر)، مشکل حل شد و به بهترین نتیجه‌ی پروژه رسیدیم (۶۰.۵۵٪).
+**1. Why did adding class weighting initially make the result worse?**
+Because the raw weight (~9.4x for Disgust) combined with augmentation and a fast LR
+decay, causing the model to fail to learn well even on train (train_acc only ~38%) —
+that's underfitting, not a generalization problem. By softening the weight (square
+root) and giving it more room (more epochs/patience), the problem was solved and we
+reached the project's best result (60.55%).
 
-**۲. از کجا فهمیدی مشکل underfitting است نه یک باگ در کد؟**
-train_accuracy را چک کردم، نه فقط val_accuracy. اگر مدل باگ داشت، معمولاً حتی روی
-batch کوچک هم شکست می‌خورد (که در `overfit_test.py` فاز ۲ آن را تأیید کرده بودیم).
-اینجا train_acc به‌آرامی و منطقی بالا می‌رفت، فقط کند و ناکافی — نشانه‌ی
-regularization بیش‌ازحد، نه باگ.
+**2. How did you know it was underfitting and not a bug in the code?**
+I checked train_accuracy, not just val_accuracy. If the model had a bug, it would
+typically fail even on a small batch (which we'd already confirmed in Phase 2's
+`overfit_test.py`). Here, train_acc was rising slowly and sensibly, just too slowly and
+insufficiently — a sign of excessive regularization, not a bug.
 
-**۳. چرا برای augmentation فقط از flip/rotation/translation استفاده کردی، نه چیزهای
-شدیدتر مثل cutout یا mixup؟**
-تصاویر فقط ۴۸×۴۸ پیکسل هستند؛ augmentation شدید می‌تواند اطلاعات مهم چهره (مثل حالت
-دهان یا چشم که تفاوت بین کلاس‌ها را مشخص می‌کند) را از بین ببرد. augmentation‌های
-هندسی ملایم، تنوع واقعی (زاویه‌ی دوربین، جهت چهره) را شبیه‌سازی می‌کنند بدون آسیب
-به سیگنال احساسی تصویر.
+**3. Why did you only use flip/rotation/translation for augmentation, not something
+stronger like cutout or mixup?**
+The images are only 48x48 pixels; aggressive augmentation could destroy important
+facial information (like mouth or eye shape, which distinguishes between classes).
+Mild geometric augmentations simulate real variation (camera angle, face orientation)
+without damaging the image's emotional signal.
 
-**۴. مدل نهایی هنوز overfit نکرده؛ چرا آموزش را در ۷۰ epoch متوقف کردی؟**
-با توجه به بودجه‌ی زمانی این فاز، ۷۰ epoch (حدود ۳۰-۴۰ دقیقه روی این GPU) یک نقطه‌ی
-توقف معقول با نتیجه‌ی خوب بود. از نمودار مشخص است که مدل هنوز در حال بهبود تدریجی
-بود؛ آموزش طولانی‌تر (یا early-stopping patience بزرگ‌تر) می‌توانست کمی نتیجه را
-بهتر کند — این را به‌عنوان محدودیت شناخته‌شده در گزارش ثبت کردم، نه این‌که وانمود کنم
-مدل به سقف خودش رسیده.
+**4. The final model still hasn't overfit; why did you stop training at 70 epochs?**
+Given this phase's time budget, 70 epochs (roughly 30-40 minutes on this GPU) was a
+reasonable stopping point with a good result. The chart shows the model was still
+improving gradually; longer training (or a larger early-stopping patience) could have
+improved the result a bit more — I recorded this as a known limitation in the report,
+rather than pretending the model had reached its ceiling.
 
-**۵. عدد ۶۰.۵۵٪ چطور با سقف واقع‌بینانه‌ی ۶۵-۷۰٪ روی FER2013 مقایسه می‌شود؟**
-این عدد در محدوده‌ی منطقی برای یک CNN نسبتاً ساده (بدون معماری‌های پیچیده‌تر مثل
-ResNet یا ensemble چند مدل) است، هرچند هنوز به سقف بالای بازه نرسیده. فاصله‌ی باقی‌مانده
-معمولاً با معماری عمیق‌تر، آموزش طولانی‌تر، یا ensemble چند مدل پر می‌شود — که خارج از
-محدوده‌ی این پروژه (که هدفش یادگیری کامل فرآیند بود، نه رسیدن به رکورد state-of-the-art) است.
+**5. How does the 60.55% number compare to the realistic ~65-70% ceiling on FER2013?**
+This number is in a reasonable range for a relatively simple CNN (without more complex
+architectures like ResNet or a multi-model ensemble), though it hasn't reached the
+upper end of that range. The remaining gap is usually closed with a deeper
+architecture, longer training, or a multi-model ensemble — outside the scope of this
+project (whose goal was learning the full process, not chasing a state-of-the-art record).
 
-## وضعیت
-فاز ۳ کامل شد. بهترین checkpoint: `checkpoints/best.pt` (val_accuracy=60.55%).
-آماده برای فاز ۴ (ارزیابی نهایی روی PrivateTest).
+## Status
+Phase 3 complete. Best checkpoint: `checkpoints/best.pt` (val_accuracy=60.55%).
+Ready for Phase 4 (final evaluation on PrivateTest).

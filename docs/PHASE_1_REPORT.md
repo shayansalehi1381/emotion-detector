@@ -1,93 +1,101 @@
-# فاز ۱ — گزارش داده
+# Phase 1 — Data Report
 
-## چه کار کردیم و چرا
+## What we did and why
 
-قبل از ساختن هر مدلی، باید مطمئن شویم داده را درست می‌خوانیم و می‌فهمیم. یک اشتباه رایج
-این است که مستقیم به سراغ مدل برویم و بعداً بفهمیم داده اشتباه بارگذاری شده — که وقت
-زیادی تلف می‌کند. برای همین این فاز کاملاً روی بررسی و آماده‌سازی داده متمرکز بود.
+Before building any model, we need to be sure we're reading and understanding the data
+correctly. A common mistake is jumping straight to the model and only later
+discovering the data was loaded wrong — which wastes a lot of time. That's why this
+phase focused entirely on inspecting and preparing the data.
 
-1. **بررسی فرمت CSV** (`src/explore_data.py`): فایل `data/fer2013.csv` سه ستون دارد:
-   `emotion` (برچسب عددی ۰ تا ۶)، `pixels` (رشته‌ی متنی از ۲۳۰۴ عدد جدا شده با فاصله،
-   یعنی ۴۸×۴۸ پیکسل خاکستری)، و `Usage` (Training/PublicTest/PrivateTest).
-2. **نمودار توزیع کلاس‌ها** (`results/class_distribution.png`): نشان می‌دهد داده به‌شدت
-   نامتوازن است — کلاس Disgust حدود ۴۳۶ نمونه در train دارد در حالی که Happy حدود ۷۲۱۵
-   نمونه دارد (تقریباً ۱۶ برابر بیشتر). این نکته را برای فاز ۳ (class weighting) نگه می‌داریم.
-3. **`src/dataset.py`**: کلاس `FER2013Dataset` که ارث‌بر `torch.utils.data.Dataset` است.
-   کار اصلی آن در `__getitem__` است: رشته‌ی پیکسل را split کرده، به آرایه‌ی numpy با شکل
-   ۴۸×۴۸ تبدیل می‌کند، و سپس به تنسور float نرمال‌شده در بازه‌ی [0,1] تبدیل می‌کند.
-   تقسیم train/val/test دقیقاً از روی ستون Usage خود دیتاست انجام می‌شود (نه تقسیم دستی)
-   تا با نتایج استاندارد این دیتاست قابل مقایسه باشیم.
-4. **DataLoader**: تابع `get_dataloaders()` سه DataLoader می‌سازد. فقط train شافل (shuffle)
-   می‌شود چون val/test فقط برای ارزیابی هستند و ترتیبشان اهمیتی ندارد.
-5. **تست سلامت** (`src/check_samples.py` → `results/sample_grid.png`): ۵ نمونه از هر کلاس
-   را نمایش دادیم. تصاویر واضح و برچسب‌ها با محتوای تصویر همخوانی منطقی دارند (مثلاً
-   نمونه‌های Happy واقعاً لبخند دارند).
+1. **Inspect the CSV format** (`src/explore_data.py`): the `data/fer2013.csv` file has
+   three columns: `emotion` (a numeric label 0 to 6), `pixels` (a text string of 2304
+   space-separated numbers, i.e. a 48x48 grayscale image), and `Usage`
+   (Training/PublicTest/PrivateTest).
+2. **Class distribution chart** (`results/class_distribution.png`): shows the data is
+   heavily imbalanced — the Disgust class has about 436 samples in train while Happy
+   has about 7215 (roughly 16x more). We keep this in mind for Phase 3 (class weighting).
+3. **`src/dataset.py`**: the `FER2013Dataset` class, a subclass of
+   `torch.utils.data.Dataset`. Its main work happens in `__getitem__`: it splits the
+   pixel string, converts it into a 48x48 numpy array, then converts that to a float
+   tensor normalized to [0,1]. The train/val/test split is taken directly from the
+   dataset's own Usage column (not a manual split) so results are comparable to this
+   dataset's standard benchmarks.
+4. **DataLoader**: the `get_dataloaders()` function builds three DataLoaders. Only
+   train is shuffled, since val/test are only for evaluation and their order doesn't matter.
+5. **Sanity check** (`src/check_samples.py` → `results/sample_grid.png`): displayed 5
+   samples from each class. The images are clear and the labels match the image
+   content sensibly (e.g. Happy samples genuinely show smiles).
 
-## نتایج واقعی
+## Real Results
 
 ```
-شکل دیتافریم: (35887, 3)
-ستون‌ها: ['emotion', 'pixels', 'Usage']
+DataFrame shape: (35887, 3)
+Columns: ['emotion', 'pixels', 'Usage']
 
-تعداد نمونه در هر بخش (Usage):
+Sample count per section (Usage):
 Training       28709
 PublicTest      3589
 PrivateTest     3589
 
-طول رشته‌ی پیکسل برای نمونه‌ی اول: 2304  (= 48*48 ✓)
+Pixel string length for the first sample: 2304  (= 48*48 check)
 ```
 
-توزیع کلاس‌ها روی train (خلاصه از نمودار): Happy بیشترین (~7215)، Disgust کمترین (~436).
-این عدم توازن حدود ۱۶ برابری، یکی از چالش‌های اصلی این دیتاست است.
+Class distribution on train (summarized from the chart): Happy is highest (~7215),
+Disgust is lowest (~436). This roughly 16x imbalance is one of this dataset's main
+challenges.
 
-تست DataLoader:
+DataLoader test:
 ```
-train: 28709 نمونه | ابعاد تصویر اول: torch.Size([1, 48, 48]) | برچسب اول: 0 (Angry)
-val:    3589 نمونه | ابعاد تصویر اول: torch.Size([1, 48, 48]) | برچسب اول: 0 (Angry)
-test:   3589 نمونه | ابعاد تصویر اول: torch.Size([1, 48, 48]) | برچسب اول: 0 (Angry)
+train: 28709 samples | first image shape: torch.Size([1, 48, 48]) | first label: 0 (Angry)
+val:    3589 samples | first image shape: torch.Size([1, 48, 48]) | first label: 0 (Angry)
+test:   3589 samples | first image shape: torch.Size([1, 48, 48]) | first label: 0 (Angry)
 
-یک batch از train_loader: images=torch.Size([64, 1, 48, 48]), labels=torch.Size([64])
+One batch from train_loader: images=torch.Size([64, 1, 48, 48]), labels=torch.Size([64])
 ```
 
-## مفاهیم جدید (با مثال ساده)
+## New Concepts (with a simple example)
 
-- **Dataset و DataLoader در PyTorch**: `Dataset` مشخص می‌کند "چگونه یک نمونه را بخوانیم"
-  (مثل یک فهرست که با ایندکس به آن دسترسی داریم). `DataLoader` دور آن یک لایه می‌کشد که
-  نمونه‌ها را به صورت batch (دسته‌های چندتایی) گروه می‌کند، به‌صورت اختیاری شافل می‌کند،
-  و می‌تواند با چند worker به‌صورت موازی داده را بارگذاری کند تا GPU منتظر نماند.
-- **Tensor شکل (N, C, H, W)**: در PyTorch تصاویر به‌صورت (تعداد نمونه، تعداد کانال، ارتفاع،
-  عرض) نگه‌داری می‌شوند. اینجا چون تصاویر خاکستری هستند، C=1 (یک کانال، بر خلاف RGB که C=3).
-  خروجی batch ما `[64, 1, 48, 48]` است یعنی ۶۴ تصویر، هر کدام ۱ کانال و ۴۸×۴۸ پیکسل.
-- **عدم توازن کلاس (class imbalance)**: وقتی تعداد نمونه‌های کلاس‌ها خیلی متفاوت است،
-  مدل به‌طور طبیعی به سمت کلاس‌های پرتعداد (اینجا Happy) متمایل می‌شود و روی کلاس‌های
-  کم‌تعداد (اینجا Disgust) ضعیف عمل می‌کند، حتی اگر دقت کلی (accuracy) خوب به نظر برسد.
+- **Dataset and DataLoader in PyTorch**: `Dataset` defines "how to read one sample"
+  (like a list you access by index). `DataLoader` wraps a layer around it that groups
+  samples into batches, optionally shuffles them, and can load data in parallel with
+  multiple workers so the GPU doesn't sit idle waiting.
+- **Tensor shape (N, C, H, W)**: in PyTorch, images are stored as (number of samples,
+  number of channels, height, width). Here, since images are grayscale, C=1 (one
+  channel, unlike RGB where C=3). Our batch output `[64, 1, 48, 48]` means 64 images,
+  each with 1 channel and 48x48 pixels.
+- **Class imbalance**: when the number of samples per class is very different, the
+  model naturally leans toward the majority classes (here, Happy) and performs poorly
+  on minority classes (here, Disgust), even if overall accuracy looks good.
 
-## سؤالات احتمالی مصاحبه
+## Likely Interview Questions
 
-**۱. چرا تصاویر را به رشته‌ی پیکسل ذخیره کرده‌اند نه فایل جدا؟**
-این فرمت مربوط به مسابقه‌ی Kaggle اصلی FER2013 است؛ ذخیره در یک CSV واحد باعث می‌شود
-دیتاست به‌صورت یک فایل قابل‌انتقال باشد و نیازی به مدیریت هزاران فایل تصویر جدا نباشد.
+**1. Why were images stored as pixel strings instead of separate files?**
+This format comes from the original FER2013 Kaggle competition; storing everything in
+a single CSV makes the dataset one portable file and avoids managing thousands of
+separate image files.
 
-**۲. چرا مقادیر پیکسل را بر ۲۵۵ تقسیم کردی؟**
-مقادیر خام پیکسل بین ۰ تا ۲۵۵ هستند. نرمال‌سازی به بازه‌ی [0,1] باعث می‌شود مقیاس ورودی‌ها
-کوچک و پایدار باشد، که آموزش شبکه‌ی عصبی را سریع‌تر و پایدارتر می‌کند (gradient‌های معقول‌تر).
+**2. Why did you divide pixel values by 255?**
+Raw pixel values range from 0 to 255. Normalizing to [0,1] keeps input scale small and
+stable, which makes neural network training faster and more stable (more reasonable
+gradients).
 
-**۳. عدم توازن کلاس‌ها در این دیتاست چه مشکلی ایجاد می‌کند و چطور قرار است حلش کنی؟**
-مدل می‌تواند با نادیده گرفتن کلاس Disgust (چون فقط ~۱.۵٪ داده است) هنوز accuracy نسبتاً
-بالایی بگیرد، چون اشتباه در آن کلاس کم تأثیر است. در فاز ۳ با class weighting (وزن بیشتر
-به loss کلاس‌های کم‌تعداد) و در فاز ۴ با گزارش per-class F1 (نه فقط accuracy کلی) این را
-مدیریت و شفاف می‌کنیم.
+**3. What problem does class imbalance cause here, and how do you plan to fix it?**
+The model could ignore the Disgust class entirely (since it's only ~1.5% of the data)
+and still get relatively high accuracy, because mistakes on that class barely matter
+to the overall score. We address this in Phase 3 with class weighting (giving more
+weight to minority-class loss) and in Phase 4 by reporting per-class F1 (not just
+overall accuracy).
 
-**۴. چرا برای val از PublicTest و برای test نهایی از PrivateTest استفاده کردی، نه برعکس؟**
-این نام‌گذاری همان تقسیم رسمی مسابقه‌ی Kaggle است. PublicTest طی مسابقه قابل‌مشاهده بود
-و برای تنظیم مدل استفاده می‌شد؛ PrivateTest فقط در پایان برای رتبه‌بندی نهایی به کار رفت.
-پیروی از همین قرارداد باعث می‌شود نتایج من با نتایج گزارش‌شده‌ی دیگران روی این دیتاست
-قابل مقایسه باشد.
+**4. Why did you use PublicTest for val and PrivateTest for the final test, not the reverse?**
+This naming follows the official Kaggle competition split. PublicTest was visible
+during the competition and used for tuning models; PrivateTest was used only at the
+end for the final ranking. Following this same convention makes my results comparable
+to others' reported results on this dataset.
 
-**۵. در DataLoader چرا فقط train را شافل کردی؟**
-شافل کردن train از این جلوگیری می‌کند که مدل ترتیب داده را حفظ کند و به آن overfit شود؛
-هر epoch ترتیب متفاوتی می‌بیند. برای val/test چون فقط ارزیابی می‌کنیم (نه یادگیری)،
-ترتیب اهمیتی ندارد و شافل کردن فقط سربار اضافی بدون فایده است.
+**5. In the DataLoader, why did you only shuffle train?**
+Shuffling train prevents the model from memorizing the data order and overfitting to
+it; each epoch sees a different order. For val/test, since we're only evaluating (not
+learning), order doesn't matter and shuffling would just be unnecessary overhead.
 
-## وضعیت
-فاز ۱ کامل شد. آماده برای فاز ۲ (مدل پایه‌ی CNN).
+## Status
+Phase 1 complete. Ready for Phase 2 (baseline CNN model).

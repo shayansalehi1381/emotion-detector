@@ -1,7 +1,7 @@
 """
-حلقه‌ی آموزش عمومی برای مدل‌های این پروژه. تابع train_model قابل استفاده‌ی مجدد است
-(در فاز ۳ با optimizer/scheduler/class-weight متفاوت دوباره استفاده می‌شود).
-اجرای مستقیم این فایل، baseline فاز ۲ (بدون BatchNorm/Dropout/Augmentation) را آموزش می‌دهد.
+Generic training loop for this project's models. The train_model function is reusable
+(it's used again in Phase 3 with a different optimizer/scheduler/class-weight).
+Running this file directly trains the Phase 2 baseline (without BatchNorm/Dropout/Augmentation).
 """
 
 import csv
@@ -19,7 +19,7 @@ torch.manual_seed(SEED)
 
 
 def run_epoch(model, loader, criterion, optimizer, device, train=True):
-    """یک epoch را اجرا می‌کند. اگر train=True، وزن‌ها به‌روزرسانی می‌شوند."""
+    """Runs one epoch. If train=True, weights are updated."""
     model.train() if train else model.eval()
 
     total_loss = 0.0
@@ -65,9 +65,9 @@ def train_model(
     early_stopping_patience=None,
 ):
     """
-    آموزش مدل + لاگ CSV هر epoch + ذخیره‌ی بهترین checkpoint (بر اساس val accuracy).
-    اگر early_stopping_patience داده شود، اگر val accuracy به مدت این‌همه epoch بهبود
-    نیابد، آموزش زودتر متوقف می‌شود (برای فاز ۳ استفاده می‌شود).
+    Trains the model + CSV log per epoch + saves the best checkpoint (based on val accuracy).
+    If early_stopping_patience is given, training stops early if val accuracy doesn't
+    improve for that many epochs (used in Phase 3).
     """
     model = model.to(device)
     criterion = criterion or nn.CrossEntropyLoss()
@@ -106,16 +106,16 @@ def train_model(
                 epochs_without_improvement += 1
 
             if early_stopping_patience and epochs_without_improvement >= early_stopping_patience:
-                print(f"Early stopping در epoch {epoch} (بدون بهبود به مدت {early_stopping_patience} epoch)")
+                print(f"Early stopping at epoch {epoch} (no improvement for {early_stopping_patience} epochs)")
                 break
 
-    print(f"\nبهترین val accuracy: {best_val_acc*100:.2f}% | checkpoint ذخیره شد در {checkpoint_path}")
+    print(f"\nBest val accuracy: {best_val_acc*100:.2f}% | checkpoint saved to {checkpoint_path}")
     return best_val_acc
 
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"استفاده از دستگاه: {device}")
+    print(f"Using device: {device}")
 
     train_loader, val_loader, _ = get_dataloaders(batch_size=128)
 

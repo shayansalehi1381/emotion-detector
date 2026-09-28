@@ -1,33 +1,36 @@
-# فاز ۰ — گزارش راه‌اندازی
+# Phase 0 — Setup Report
 
-## چه کار کردیم و چرا
+## What we did and why
 
-هدف این فاز فقط آماده کردن محیط بود، بدون هیچ کد یادگیری ماشین. دلیلش این است که
-اگر محیط (GPU، پکیج‌ها، ساختار پوشه‌ها) از اول درست نباشد، فازهای بعدی پر از خطاهای
-غیرمرتبط با یادگیری ماشین می‌شوند.
+The goal of this phase was purely to prepare the environment, with no machine learning
+code at all. The reason: if the environment (GPU, packages, folder structure) isn't
+right from the start, later phases fill up with errors unrelated to machine learning.
 
-کارهای انجام‌شده:
+Work completed:
 
-1. **محیط مجازی (venv)**: با `py -3.11 -m venv .venv` یک محیط پایتون ایزوله ساختیم.
-   چرا مهم است؟ چون پکیج‌های این پروژه (نسخه‌ی خاص PyTorch با CUDA) ممکن است با پکیج‌های
-   نصب‌شده‌ی سراسری روی سیستم تداخل داشته باشند.
-2. **نصب PyTorch با CUDA**: از ایندکس رسمی PyTorch نسخه‌ی `torch==2.6.0+cu124` را نصب کردیم
-   (سازگار با درایور GPU سیستم). این نسخه به‌جای اجرای محاسبات روی CPU، آن‌ها را روی GPU
-   (کارت گرافیک) اجرا می‌کند که برای شبکه‌های عصبی کانولوشنی (CNN) دهها برابر سریع‌تر است.
-3. **نصب بقیه‌ی پکیج‌ها**: pandas/numpy برای کار با داده، matplotlib/seaborn برای نمودار،
-   scikit-learn برای معیارهای ارزیابی (precision/recall/F1)، opencv-python و mediapipe
-   برای تشخیص چهره در فاز ۵، tqdm برای نوار پیشرفت.
-4. **تست GPU** (`src/check_gpu.py`): یک ضرب ماتریسی واقعی روی GPU اجرا کردیم تا مطمئن شویم
-   نصب فقط "روی کاغذ" درست نیست، بلکه واقعاً کار می‌کند.
-5. **ساختار پوشه‌ها**: `src/` (کد)، `data/` (دیتاست)، `checkpoints/` (وزن‌های مدل)،
-   `results/` (نمودار و جدول)، `docs/` (گزارش‌ها).
-6. **`.gitignore`**: فایل دیتاست (حدود ۳۰۰ مگابایت) و محیط مجازی از گیت کنار گذاشته شدند
-   چون حجیم و قابل بازتولید هستند؛ فقط کد باید در گیت باشد.
-7. **`git init` مستقل**: چون این پوشه داخل یک ریپوی گیت بسیار بزرگ‌تر (کل پوشه‌ی کاربر ویندوز)
-   قرار دارد، یک ریپوی گیت جدید و جداگانه فقط برای این پروژه ساختیم تا تاریخچه‌ی این پروژه
-   با فایل‌های نامرتبط دیگر روی سیستم مخلوط نشود.
+1. **Virtual environment (venv)**: created an isolated Python environment with
+   `py -3.11 -m venv .venv`. Why does this matter? Because this project's packages (a
+   specific version of PyTorch with CUDA) could conflict with packages installed
+   globally on the system.
+2. **Install PyTorch with CUDA**: installed `torch==2.6.0+cu124` from PyTorch's official
+   index (compatible with the system's GPU driver). This version runs computations on
+   the GPU (graphics card) instead of the CPU, which is tens of times faster for
+   convolutional neural networks (CNNs).
+3. **Install the remaining packages**: pandas/numpy for working with data,
+   matplotlib/seaborn for plotting, scikit-learn for evaluation metrics
+   (precision/recall/F1), opencv-python and mediapipe for face detection in Phase 5,
+   tqdm for progress bars.
+4. **GPU test** (`src/check_gpu.py`): ran a real matrix multiplication on the GPU to
+   make sure the install isn't just correct "on paper" but actually works.
+5. **Folder structure**: `src/` (code), `data/` (dataset), `checkpoints/` (model
+   weights), `results/` (charts and tables), `docs/` (reports).
+6. **`.gitignore`**: the dataset file (about 300MB) and the virtual environment were
+   excluded from git since they're large and reproducible; only code should be in git.
+7. **Independent `git init`**: since this folder sits inside a much larger git repo
+   (the entire Windows user folder), we created a new, separate git repo just for this
+   project so its history doesn't get mixed with unrelated files elsewhere on the system.
 
-## نتایج واقعی
+## Real Results
 
 ```
 PyTorch version: 2.6.0+cu124
@@ -37,52 +40,57 @@ CUDA version (build): 12.4
 GPU matmul test OK, result shape: torch.Size([1000, 1000]), device: cuda:0
 ```
 
-بررسی اولیه‌ی دیتاست (`data/fer2013.csv`):
+Initial dataset check (`data/fer2013.csv`):
 
 ```
-ستون‌ها: emotion, pixels, Usage
-تعداد کل نمونه‌ها: 35,887
-Training:    28,709 نمونه
-PublicTest:   3,589 نمونه  (برای validation استفاده می‌شود)
-PrivateTest:  3,589 نمونه  (برای test نهایی استفاده می‌شود)
+Columns: emotion, pixels, Usage
+Total samples: 35,887
+Training:    28,709 samples
+PublicTest:   3,589 samples  (used for validation)
+PrivateTest:  3,589 samples  (used for the final test)
 ```
 
-این اعداد دقیقاً با تقسیم استاندارد و شناخته‌شده‌ی FER2013 مطابقت دارد.
+These numbers exactly match FER2013's standard, well-known split.
 
-## مفاهیم جدید (با مثال ساده)
+## New Concepts (with a simple example)
 
-- **محیط مجازی (venv)**: مثل یک "پوشه‌ی ایزوله" برای نصب پکیج‌های پایتون است، تا نصب یک
-  نسخه‌ی خاص از یک کتابخانه برای این پروژه، نسخه‌ی نصب‌شده برای پروژه‌های دیگر را خراب نکند.
-- **CUDA**: فناوری انویدیا که اجازه می‌دهد کدهای عمومی (مثل ضرب ماتریس) روی هسته‌های موازی
-  GPU اجرا شوند. یک GPU هزاران هسته‌ی ساده دارد که برای عملیات ماتریسی شبکه‌های عصبی
-  (که در واقع فقط ضرب و جمع ماتریس هستند) بسیار سریع‌تر از چند هسته‌ی قوی CPU عمل می‌کنند.
-- **train/validation/test split**: سه بخش جدا از داده. train برای یادگیری مدل استفاده
-  می‌شود، validation برای تنظیم تنظیمات مدل (مثل انتخاب بهترین epoch) بدون دیدن داده‌ی
-  نهایی، و test فقط یک‌بار در آخر برای گزارش عملکرد واقعی مدل روی داده‌ی کاملاً دیده‌نشده.
+- **Virtual environment (venv)**: like an "isolated folder" for installing Python
+  packages, so installing a specific version of a library for this project doesn't
+  break the version installed for other projects.
+- **CUDA**: NVIDIA's technology that lets general-purpose code (like matrix
+  multiplication) run on the GPU's parallel cores. A GPU has thousands of simple cores
+  that are much faster than a few powerful CPU cores for the matrix operations of
+  neural networks (which are really just matrix multiplication and addition).
+- **train/validation/test split**: three separate portions of the data. Train is used
+  to learn the model, validation is used to tune settings (like picking the best
+  epoch) without looking at the final data, and test is used only once at the end to
+  report the model's real performance on completely unseen data.
 
-## سؤالات احتمالی مصاحبه
+## Likely Interview Questions
 
-**۱. چرا از GPU به‌جای CPU استفاده کردی؟**
-چون CNN شامل میلیون‌ها ضرب و جمع ماتریسی است که می‌توانند به‌صورت موازی اجرا شوند.
-GPU برای این کار طراحی شده و آموزش را از چند ساعت به چند دقیقه کاهش می‌دهد.
+**1. Why did you use a GPU instead of a CPU?**
+Because a CNN involves millions of matrix multiplications and additions that can run
+in parallel. GPUs are designed for exactly this and cut training from hours down to
+minutes.
 
-**۲. چرا دیتاست را در گیت commit نکردی؟**
-فایل دیتاست حدود ۳۰۰ مگابایت است. commit کردن فایل‌های حجیم در گیت باعث سنگین شدن
-تاریخچه‌ی ریپو می‌شود و بهترین روش نگه‌داری آن‌ها به‌صورت جدا (یا با ابزارهایی مثل Git LFS) است.
+**2. Why didn't you commit the dataset to git?**
+The dataset file is about 300MB. Committing large files to git bloats the repo's
+history, and the best practice is to keep them separate (or use a tool like Git LFS).
 
-**۳. چرا سه بخش train/validation/test لازم است، چرا فقط train/test کافی نیست؟**
-اگر فقط train/test داشته باشیم و برای انتخاب بهترین مدل چندین بار روی test چک کنیم،
-عملاً به‌طور غیرمستقیم مدل را روی test overfit می‌کنیم. validation یک "میدان تستِ میانی"
-است که اجازه می‌دهد تصمیمات (مثل زمان توقف آموزش) بگیریم بدون آلوده کردن test نهایی.
+**3. Why do you need three splits — train/validation/test — isn't train/test enough?**
+If we only had train/test and checked test repeatedly to pick the best model, we'd
+effectively be indirectly overfitting the model to test. Validation is an "intermediate
+test field" that lets us make decisions (like when to stop training) without
+contaminating the final test.
 
-**۴. چرا محیط مجازی (venv) ساختی؟**
-برای جداسازی dependencies این پروژه از پکیج‌های نصب‌شده‌ی سراسری روی سیستم، و برای
-قابل‌بازتولید بودن محیط (هر کسی با requirements.txt می‌تواند همان محیط را بسازد).
+**4. Why did you create a virtual environment (venv)?**
+To isolate this project's dependencies from packages installed globally on the system,
+and for reproducibility (anyone can build the same environment with requirements.txt).
 
-**۵. نسخه‌ی CUDA که نصب کردی چطور با درایور GPU سیستم سازگار است؟**
-درایور NVIDIA نسخه‌های قدیمی‌تر CUDA Toolkit را هم پشتیبانی می‌کند (backward compatible).
-درایور سیستم از CUDA تا نسخه‌ی بسیار جدیدتر پشتیبانی می‌کرد، پس نسخه‌ی cu124 بدون مشکل
-روی آن اجرا شد؛ این را با اجرای واقعی `check_gpu.py` تأیید کردیم، نه فقط با فرض.
+**5. How is the CUDA version you installed compatible with the system's GPU driver?**
+NVIDIA drivers support older CUDA Toolkit versions too (backward compatible). The
+system's driver supported a much newer CUDA version, so cu124 ran on it without issue;
+we confirmed this by actually running `check_gpu.py`, not just by assuming it.
 
-## وضعیت
-فاز ۰ کامل شد. آماده برای فاز ۱ (بررسی و آماده‌سازی داده).
+## Status
+Phase 0 complete. Ready for Phase 1 (data review and preparation).

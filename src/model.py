@@ -1,7 +1,7 @@
 """
-مدل CNN پایه برای طبقه‌بندی ۷ حالت احساسی از تصویر ۴۸×۴۸ خاکستری.
-این نسخه عمداً ساده است (بدون BatchNorm/Dropout/Augmentation) تا در فاز ۲
-یک baseline صادقانه داشته باشیم؛ بهبودها در فاز ۳ اضافه می‌شوند.
+Baseline CNN model for classifying 7 emotions from a 48x48 grayscale image.
+This version is deliberately simple (no BatchNorm/Dropout/Augmentation) so Phase 2 has
+an honest baseline; improvements are added in Phase 3.
 """
 
 import torch
@@ -12,10 +12,11 @@ NUM_CLASSES = 7
 
 class EmotionCNN(nn.Module):
     """
-    معماری: سه بلوک (Conv -> ReLU -> MaxPool) که تدریجاً تعداد کانال را زیاد و
-    ابعاد مکانی تصویر را کم می‌کنند، سپس دو لایه‌ی fully-connected برای طبقه‌بندی.
+    Architecture: three (Conv -> ReLU -> MaxPool) blocks that gradually increase
+    channel count and shrink the image's spatial dimensions, followed by two
+    fully-connected layers for classification.
 
-    مسیر ابعاد: 48x48x1 -> 24x24x32 -> 12x12x64 -> 6x6x128 -> Flatten(4608) -> 128 -> 7
+    Shape path: 48x48x1 -> 24x24x32 -> 12x12x64 -> 6x6x128 -> Flatten(4608) -> 128 -> 7
     """
 
     def __init__(self, num_classes=NUM_CLASSES):
@@ -50,9 +51,9 @@ class EmotionCNN(nn.Module):
 
 class EmotionCNNImproved(nn.Module):
     """
-    نسخه‌ی بهبودیافته‌ی EmotionCNN برای فاز ۳: همان معماری سه‌بلوکی، به‌علاوه‌ی
-    BatchNorm بعد از هر Conv (پایدارتر و سریع‌تر کردن آموزش) و Dropout قبل از
-    لایه‌های fully-connected (کاهش overfitting با خاموش کردن تصادفی نورون‌ها در train).
+    Improved version of EmotionCNN for Phase 3: the same three-block architecture,
+    plus BatchNorm after every Conv (more stable/faster training) and Dropout before
+    the fully-connected layers (reduces overfitting by randomly disabling neurons during train).
     """
 
     def __init__(self, num_classes=NUM_CLASSES, dropout1=0.5, dropout2=0.3):
@@ -91,20 +92,20 @@ class EmotionCNNImproved(nn.Module):
 
 
 if __name__ == "__main__":
-    # تست صحت شکل: آیا خروجی مدل ابعاد درستی دارد؟
+    # Shape sanity check: does the model's output have the right dimensions?
     model = EmotionCNN()
     n_params = sum(p.numel() for p in model.parameters())
-    print(f"تعداد پارامترهای مدل: {n_params:,}")
+    print(f"Model parameter count: {n_params:,}")
 
-    dummy_input = torch.randn(4, 1, 48, 48)  # 4 تصویر آزمایشی
+    dummy_input = torch.randn(4, 1, 48, 48)  # 4 test images
     output = model(dummy_input)
-    print(f"ورودی: {dummy_input.shape} -> خروجی: {output.shape}")
-    assert output.shape == (4, NUM_CLASSES), "ابعاد خروجی مدل اشتباه است!"
-    print("تست شکل خروجی موفق بود.")
+    print(f"Input: {dummy_input.shape} -> Output: {output.shape}")
+    assert output.shape == (4, NUM_CLASSES), "Model output shape is wrong!"
+    print("Output shape test passed.")
 
     improved = EmotionCNNImproved()
     n_params_improved = sum(p.numel() for p in improved.parameters())
-    print(f"\nتعداد پارامترهای EmotionCNNImproved: {n_params_improved:,}")
+    print(f"\nEmotionCNNImproved parameter count: {n_params_improved:,}")
     out2 = improved(dummy_input)
     assert out2.shape == (4, NUM_CLASSES)
-    print(f"ورودی: {dummy_input.shape} -> خروجی: {out2.shape}")
+    print(f"Input: {dummy_input.shape} -> Output: {out2.shape}")

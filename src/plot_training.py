@@ -1,6 +1,6 @@
 """
-رسم نمودار loss و accuracy (train/val) از روی فایل لاگ CSV که train.py تولید می‌کند.
-استفاده: PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe src/plot_training.py <log_csv> <output_png> [عنوان]
+Plots the loss and accuracy (train/val) from the CSV log file that train.py produces.
+Usage: PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe src/plot_training.py <log_csv> <output_png> [title]
 """
 
 import sys
@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
-def plot_training_log(log_path, output_path, title="روند آموزش"):
+def plot_training_log(log_path, output_path, title="Training progress"):
     df = pd.read_csv(log_path)
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
@@ -31,15 +31,15 @@ def plot_training_log(log_path, output_path, title="روند آموزش"):
     fig.suptitle(title)
     fig.tight_layout()
     fig.savefig(output_path, dpi=120)
-    print(f"نمودار ذخیره شد در {output_path}")
+    print(f"Chart saved to {output_path}")
 
     best_val_acc = df["val_acc"].max()
     best_epoch = df.loc[df["val_acc"].idxmax(), "epoch"]
-    print(f"بهترین val accuracy: {best_val_acc*100:.2f}% در epoch {int(best_epoch)}")
+    print(f"Best val accuracy: {best_val_acc*100:.2f}% at epoch {int(best_epoch)}")
 
 
 if __name__ == "__main__":
     log_path = sys.argv[1] if len(sys.argv) > 1 else "results/train_log_baseline.csv"
     output_path = sys.argv[2] if len(sys.argv) > 2 else "results/baseline_curves.png"
-    title = sys.argv[3] if len(sys.argv) > 3 else "روند آموزش baseline"
+    title = sys.argv[3] if len(sys.argv) > 3 else "baseline training progress"
     plot_training_log(log_path, output_path, title)

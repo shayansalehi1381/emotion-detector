@@ -1,9 +1,9 @@
 """
-برنامه‌ی زنده‌ی فاز ۵: از وب‌کم فریم می‌خواند، چهره را با Haar Cascade (OpenCV) پیدا
-می‌کند، همان preprocessing زمان train (خاکستری، ۴۸×۴۸، نرمال [0,1]) را روی چهره اعمال
-می‌کند، و حالت احساسی + درصد اطمینان + FPS را روی تصویر نشان می‌دهد.
-پیش‌بینی‌ها با میانگین متحرک بین فریم‌ها هموار می‌شوند تا لرزش نمایش کم شود.
-خروج با کلید q.
+Phase 5 live application: reads webcam frames, finds the face with Haar Cascade
+(OpenCV), applies the same preprocessing as train time (grayscale, 48x48, normalize to
+[0,1]) to the face, and shows the emotion + confidence percentage + FPS on screen.
+Predictions are smoothed with a moving average across frames to reduce display jitter.
+Exit with the q key.
 """
 
 import time
@@ -19,33 +19,33 @@ from model import EmotionCNNImproved
 CHECKPOINT_PATH = "checkpoints/best.pt"
 CASCADE_PATH = "models/haarcascade_frontalface_default.xml"
 IMG_SIZE = 48
-SMOOTH_WINDOW = 8  # تعداد فریم‌هایی که برای میانگین متحرک نگه می‌داریم
+SMOOTH_WINDOW = 8  # number of frames kept for the moving average
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"استفاده از دستگاه: {device}")
+print(f"Using device: {device}")
 
 model = EmotionCNNImproved().to(device)
 model.load_state_dict(torch.load(CHECKPOINT_PATH, map_location=device))
 model.eval()
-print(f"مدل از {CHECKPOINT_PATH} بارگذاری شد.")
+print(f"Model loaded from {CHECKPOINT_PATH}.")
 
 face_detector = cv2.CascadeClassifier(CASCADE_PATH)
 if face_detector.empty():
-    raise RuntimeError(f"فایل cascade در {CASCADE_PATH} پیدا نشد یا خراب است.")
+    raise RuntimeError(f"Cascade file at {CASCADE_PATH} not found or corrupted.")
 
-# صف پیش‌بینی‌های اخیر برای میانگین متحرک (هموارسازی)
+# queue of recent predictions for the moving average (smoothing)
 prob_history = deque(maxlen=SMOOTH_WINDOW)
 
 
 def preprocess_face(gray_face):
-    """همان preprocessing زمان train: resize به 48x48، نرمال به [0,1]، تبدیل به تنسور."""
+    """Same preprocessing as train time: resize to 48x48, normalize to [0,1], convert to a tensor."""
     resized = cv2.resize(gray_face, (IMG_SIZE, IMG_SIZE))
     tensor = torch.from_numpy(resized).float().unsqueeze(0).unsqueeze(0) / 255.0
     return tensor.to(device)
 
 
 def predict_emotion(gray_face):
-    """پیش‌بینی خام مدل روی یک چهره، بدون هموارسازی."""
+    """Raw model prediction on one face, without smoothing."""
     tensor = preprocess_face(gray_face)
     with torch.no_grad():
         logits = model(tensor)
@@ -56,23 +56,23 @@ def predict_emotion(gray_face):
 def main():
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
-        raise RuntimeError("وب‌کم پیدا نشد. مطمئن شوید دوربین متصل و در دسترس است.")
+        raise RuntimeError("Webcam not found. Make sure a camera is connected and available.")
 
-    print("برنامه‌ی زنده شروع شد. برای خروج کلید q را بزنید.")
+    print("Live app started. Press q to quit.")
 
     prev_time = time.time()
 
     while True:
         ret, frame = cap.read()
         if not ret:
-            print("خواندن فریم از وب‌کم شکست خورد.")
+            print("Failed to read a frame from the webcam.")
             break
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = face_detector.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(80, 80))
 
         if len(faces) > 0:
-            # بزرگ‌ترین چهره را به‌عنوان چهره‌ی اصلی در نظر می‌گیریم
+            # treat the largest face as the main face
             x, y, w, h = max(faces, key=lambda f: f[2] * f[3])
             face_roi = gray[y:y + h, x:x + w]
 
@@ -88,7 +88,7 @@ def main():
             label = f"{emotion_name}: {confidence*100:.0f}%"
             cv2.putText(frame, label, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 200, 0), 2)
         else:
-            # cv2.putText فقط از فونت‌های Hershey (لاتین) پشتیبانی می‌کند، پس متن روی تصویر انگلیسی است
+            # cv2.putText only supports Hershey (Latin) fonts, so on-screen text is in English
             prob_history.clear()
             cv2.putText(frame, "No face detected", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
 
@@ -103,7 +103,7 @@ def main():
 
     cap.release()
     cv2.destroyAllWindows()
-    print("برنامه بسته شد.")
+    print("App closed.")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 """
-تست سلامت داده: چند نمونه از هر کلاس احساسی را از train set نمایش می‌دهد و در
-results/sample_grid.png ذخیره می‌کند. هدف: اطمینان از این‌که بازسازی تصویر از
-رشته‌ی پیکسل درست انجام شده و برچسب‌ها با تصویر همخوانی دارند.
+Data sanity check: displays a few samples from each emotion class from the train set
+and saves them to results/sample_grid.png. Goal: confirm the image reconstruction from
+pixel strings was done correctly and labels match the images.
 """
 
 import matplotlib.pyplot as plt
@@ -12,7 +12,7 @@ N_SAMPLES_PER_CLASS = 5
 
 ds = FER2013Dataset(split="train")
 
-# پیدا کردن N نمونه اول برای هر کلاس
+# Find the first N samples for each class
 samples_by_class = {c: [] for c in EMOTION_NAMES}
 for i in range(len(ds)):
     label = int(ds.df.iloc[i]["emotion"])
@@ -36,7 +36,7 @@ for row, (label, indices) in enumerate(samples_by_class.items()):
             ax.set_xticks([])
             ax.set_yticks([])
 
-fig.suptitle("نمونه‌هایی از هر کلاس احساسی (train set)")
+fig.suptitle("Samples from each emotion class (train set)")
 fig.tight_layout()
 fig.savefig("results/sample_grid.png", dpi=120)
-print("نمودار نمونه‌ها ذخیره شد در results/sample_grid.png")
+print("Sample grid saved to results/sample_grid.png")

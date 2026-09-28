@@ -1,10 +1,10 @@
 """
-ارزیابی نهایی بهترین مدل (checkpoints/best.pt) روی PrivateTest (test set نهایی).
-این فایل فقط یک‌بار در پایان پروژه اجرا می‌شود — PrivateTest تا این لحظه هرگز دیده
-نشده (نه برای آموزش، نه برای انتخاب checkpoint)، پس عدد این‌جا صادقانه‌ترین برآورد
-از عملکرد واقعی مدل روی داده‌ی کاملاً جدید است.
+Final evaluation of the best model (checkpoints/best.pt) on PrivateTest (the final test
+set). This file runs only once at the end of the project — PrivateTest has never been
+seen until this point (not for training, not for checkpoint selection), so the number
+here is the most honest estimate of the model's real performance on completely new data.
 
-خروجی: confusion matrix، گزارش precision/recall/f1 هر کلاس، و چند نمونه‌ی اشتباه.
+Output: confusion matrix, per-class precision/recall/f1 report, and a few misclassified samples.
 """
 
 import matplotlib.pyplot as plt
@@ -17,14 +17,14 @@ from dataset import EMOTION_NAMES, get_dataloaders
 from model import EmotionCNNImproved
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"استفاده از دستگاه: {device}")
+print(f"Using device: {device}")
 
 CHECKPOINT_PATH = "checkpoints/best.pt"
 
 model = EmotionCNNImproved().to(device)
 model.load_state_dict(torch.load(CHECKPOINT_PATH, map_location=device))
 model.eval()
-print(f"مدل از {CHECKPOINT_PATH} بارگذاری شد.")
+print(f"Model loaded from {CHECKPOINT_PATH}.")
 
 _, _, test_loader = get_dataloaders(batch_size=128, augment=False)
 
@@ -50,15 +50,15 @@ all_labels = np.array(all_labels)
 all_confidences = np.array(all_confidences)
 
 test_accuracy = (all_preds == all_labels).mean()
-print(f"\n=== نتیجه‌ی نهایی روی PrivateTest ===")
-print(f"تعداد نمونه: {len(all_labels)}")
+print(f"\n=== Final result on PrivateTest ===")
+print(f"Number of samples: {len(all_labels)}")
 print(f"Test accuracy: {test_accuracy*100:.2f}%")
 
 class_names = [EMOTION_NAMES[i] for i in range(len(EMOTION_NAMES))]
 
-# گزارش precision/recall/f1 هر کلاس
+# Per-class precision/recall/f1 report
 report = classification_report(all_labels, all_preds, target_names=class_names, digits=3)
-print("\n=== گزارش per-class (precision/recall/f1) ===")
+print("\n=== Per-class report (precision/recall/f1) ===")
 print(report)
 
 with open("results/classification_report.txt", "w", encoding="utf-8") as f:
@@ -74,12 +74,12 @@ ax.set_ylabel("True")
 ax.set_title(f"Confusion Matrix - PrivateTest (accuracy={test_accuracy*100:.2f}%)")
 fig.tight_layout()
 fig.savefig("results/confusion_matrix.png", dpi=120)
-print("\nConfusion matrix ذخیره شد در results/confusion_matrix.png")
+print("\nConfusion matrix saved to results/confusion_matrix.png")
 
-# تحلیل خطا: چند نمونه که مدل با اطمینان بالا اشتباه پیش‌بینی کرده
+# Error analysis: a few samples the model mispredicted with high confidence
 wrong_mask = all_preds != all_labels
 wrong_indices = np.where(wrong_mask)[0]
-# مرتب‌سازی بر اساس بالاترین اطمینان اشتباه (بدترین اشتباهات مدل)
+# Sort by highest wrong confidence (the model's worst mistakes)
 wrong_indices_sorted = wrong_indices[np.argsort(-all_confidences[wrong_indices])]
 
 N_ERRORS = 16
@@ -95,7 +95,7 @@ for ax, idx in zip(axes.flat, top_errors):
     ax.set_title(f"true={true_label}\npred={pred_label} ({conf*100:.0f}%)", fontsize=9)
     ax.axis("off")
 
-fig.suptitle("بدترین خطاهای مدل (اشتباه با بالاترین اطمینان)")
+fig.suptitle("Worst model mistakes (highest-confidence errors)")
 fig.tight_layout()
 fig.savefig("results/error_analysis.png", dpi=120)
-print("نمودار تحلیل خطا ذخیره شد در results/error_analysis.png")
+print("Error analysis chart saved to results/error_analysis.png")

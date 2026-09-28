@@ -1,10 +1,11 @@
 """
-آزمایش تشخیصی فاز ۳ (final_v2): چرا final_full (وزن کلاس خام + augmentation + scheduler)
-از bn_dropout ساده ضعیف‌تر بود؟ چون train_acc در final_full فقط به ~38% رسید — یعنی
-underfitting، نه overfitting. فرضیه: وزن خام کلاس Disgust (~9.4x) خیلی تهاجمی بوده و
-همراه با augmentation و کاهش سریع LR (patience=3) مدل را بیش‌ازحد محدود کرده.
-این نسخه با وزن ملایم‌تر (جذر وزن، smooth=True)، scheduler کم‌تهاجمی‌تر (patience=5)،
-و epoch/patience بیشتر دوباره تست می‌کند.
+Phase 3 diagnostic experiment (final_v2): why was final_full (raw class weight +
+augmentation + scheduler) worse than plain bn_dropout? Because train_acc in final_full
+only reached ~38% — meaning underfitting, not overfitting. Hypothesis: the raw weight
+for the Disgust class (~9.4x) was too aggressive and, combined with augmentation and a
+fast LR decay (patience=3), over-constrained the model.
+This version retests with a milder weight (square-rooted weight, smooth=True), a less
+aggressive scheduler (patience=5), and more epochs/patience.
 """
 
 import torch
@@ -19,12 +20,12 @@ SEED = 42
 torch.manual_seed(SEED)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"استفاده از دستگاه: {device}")
+print(f"Using device: {device}")
 
 train_loader, val_loader, _ = get_dataloaders(batch_size=128, augment=True)
 
 class_weights = get_class_weights(smooth=True).to(device)
-print(f"وزن کلاس‌های ملایم‌شده (sqrt): {class_weights}")
+print(f"Smoothed class weights (sqrt): {class_weights}")
 
 model = EmotionCNNImproved()
 criterion = nn.CrossEntropyLoss(weight=class_weights)

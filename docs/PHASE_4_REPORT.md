@@ -1,115 +1,119 @@
-# فاز ۴ — گزارش ارزیابی نهایی
+# Phase 4 — Final Evaluation Report
 
-## چه کار کردیم و چرا
+## What we did and why
 
-تا اینجا هر تصمیمی (انتخاب معماری، هایپرپارامتر، بهترین epoch) فقط بر اساس
-train/val گرفته شده بود. PrivateTest تا این لحظه کاملاً دست‌نخورده مانده بود — نه یک
-نمونه از آن در آموزش یا انتخاب مدل دیده شده. این فاز تنها **یک‌بار** روی PrivateTest
-اجرا شد تا صادقانه‌ترین برآورد از عملکرد مدل روی داده‌ی واقعاً جدید به دست بیاید.
-(`src/evaluate.py`)
+Up to this point, every decision (architecture choice, hyperparameters, best epoch)
+had been made based only on train/val. PrivateTest had remained completely untouched
+until this moment — not a single sample from it had been seen during training or model
+selection. This phase ran on PrivateTest **exactly once** to get the most honest
+possible estimate of the model's performance on truly new data. (`src/evaluate.py`)
 
-## نتایج واقعی
+## Real Results
 
 ```
-تعداد نمونه‌ی PrivateTest: 3589
+Number of PrivateTest samples: 3589
 Test accuracy: 60.60%
 ```
 
-این عدد تقریباً برابر با val_accuracy فاز ۳ (۶۰.۵۵٪) است — فاصله‌ی خیلی کم (۰.۰۵ نقطه‌ی
-درصد) نشان می‌دهد مدل به val_set هم overfit نشده و این عدد یک برآورد قابل‌اعتماد از
-عملکرد واقعی مدل است.
+This number is nearly identical to Phase 3's val_accuracy (60.55%) — the very small
+gap (0.05 percentage points) shows the model didn't overfit to the val set either, and
+this number is a reliable estimate of the model's real performance.
 
-### گزارش per-class (precision/recall/f1)
+### Per-class Report (precision/recall/f1)
 
-| کلاس | precision | recall | f1-score | تعداد نمونه |
+| Class | precision | recall | f1-score | support |
 |---|---|---|---|---|
 | Angry    | 0.580 | 0.470 | 0.520 | 491 |
 | Disgust  | 0.431 | 0.509 | 0.467 | 55  |
-| Fear     | 0.446 | 0.197 | **0.273** (ضعیف‌ترین) | 528 |
-| Happy    | 0.822 | 0.854 | **0.838** (بهترین) | 879 |
+| Fear     | 0.446 | 0.197 | **0.273** (weakest) | 528 |
+| Happy    | 0.822 | 0.854 | **0.838** (best) | 879 |
 | Sad      | 0.419 | 0.540 | 0.472 | 594 |
 | Surprise | 0.723 | 0.767 | 0.744 | 416 |
 | Neutral  | 0.546 | 0.673 | 0.603 | 626 |
 | **macro avg** | 0.567 | 0.573 | 0.559 | 3589 |
 | **weighted avg** | 0.601 | 0.606 | 0.593 | 3589 |
 
-نکته‌ی جالب: با وجود این‌که Disgust کمترین تعداد نمونه را دارد (۵۵ نمونه)، بعد از
-class weighting دیگر بدترین کلاس نیست (recall=۰.۵۰۹، حتی بهتر از Angry). ولی **Fear**
-با وجود ۵۲۸ نمونه (نسبتاً زیاد)، ضعیف‌ترین کلاس شد — پس مشکل صرفاً "کمبود داده" نبود؛
-Fear ذاتاً با کلاس‌های دیگر شباهت بصری زیادی دارد (مصاحبه‌ی زیر را ببینید).
+Interesting point: despite Disgust having the fewest samples (55), after class
+weighting it's no longer the worst class (recall=0.509, even better than Angry). But
+**Fear**, despite having a relatively large 528 samples, became the weakest class — so
+the problem wasn't purely "lack of data"; Fear is inherently very visually similar to
+other classes (see the interview section below).
 
 ### Confusion Matrix (`results/confusion_matrix.png`)
 
-بزرگ‌ترین الگوهای اشتباه:
-- **Fear → Sad** (۱۶۰ مورد) و **Fear → Surprise** (۸۳) و **Fear → Neutral** (۷۴):
-  Fear در FER2013 معمولاً با اخم/چشمان گشاد همراه است که با Sad و Surprise و حتی
-  Neutral شباهت بصری زیادی دارد.
-- **Sad → Neutral** (۱۵۲ مورد): تفاوت Sad و Neutral در تصاویر ۴۸×۴۸ سیاه‌سفید
-  می‌تواند خیلی ظریف باشد (کمی افتادگی گوشه‌ی لب).
-- **Angry → Sad** (۹۹ مورد): هر دو می‌توانند اخم داشته باشند.
-- **Happy** تقریباً هیچ‌وقت با کلاس‌های منفی اشتباه گرفته نمی‌شود (لبخند سیگنال بسیار
-  واضحی است) — دقیقاً به همین دلیل بهترین f1 را دارد.
+The biggest error patterns:
+- **Fear → Sad** (160 cases), **Fear → Surprise** (83), and **Fear → Neutral** (74):
+  Fear in FER2013 is usually accompanied by a frown/wide eyes, which is visually very
+  similar to Sad, Surprise, and even Neutral.
+- **Sad → Neutral** (152 cases): the difference between Sad and Neutral in 48x48
+  black-and-white images can be very subtle (a slight downturn at the corner of the mouth).
+- **Angry → Sad** (99 cases): both can involve a frown.
+- **Happy** is almost never confused with a negative class (a smile is a very clear
+  signal) — precisely why it has the best F1.
 
-### تحلیل خطا (`results/error_analysis.png`)
+### Error Analysis (`results/error_analysis.png`)
 
-۱۶ نمونه‌ای که مدل با بالاترین اطمینان (تا ۱۰۰٪) اشتباه پیش‌بینی کرده را بررسی کردیم.
-نکته‌ی مهم: **بخش زیادی از این "خطاها" احتمالاً خطای برچسب‌گذاری خود دیتاست هستند**،
-نه خطای واقعی مدل:
+We reviewed the 16 samples the model mispredicted with the highest confidence (up to
+100%). Key point: **a good chunk of these "errors" are likely the dataset's own
+labeling errors**, not genuine model failures:
 
-- چند تصویر با برچسب Surprise در واقع صورتی کاملاً خندان هستند (دهان باز از خنده، نه
-  از تعجب) — مدل با اطمینان ۹۹-۱۰۰٪ آن‌ها را Happy پیش‌بینی کرده که از نظر بصری منطقی‌تر
-  به نظر می‌رسد. همین‌طور یک نمونه با برچسب Fear که در واقع یک لبخند واضح است و مدل
-  با اطمینان ۱۰۰٪ آن را Happy پیش‌بینی کرده.
-- روی چند تصویر واترمارک شرکت‌های عکس stock (مثل "shutterstock") دیده می‌شود —
-  نشانه‌ای که این دیتاست به‌صورت خودکار از اینترنت جمع‌آوری شده و کیفیت برچسب‌ها
-  همیشه ۱۰۰٪ قابل‌اعتماد نیست (یک محدودیت شناخته‌شده‌ی FER2013 در ادبیات پژوهشی).
+- Several images labeled Surprise are actually clearly smiling faces (mouth open from
+  laughing, not shock) — the model predicted Happy for them with 99-100% confidence,
+  which seems more visually sensible. Likewise, one sample labeled Fear is actually a
+  clear smile, and the model predicted Happy for it with 100% confidence.
+- Watermarks from stock photo companies (like "shutterstock") are visible on several
+  images — a sign that this dataset was collected automatically from the internet, and
+  label quality isn't always 100% reliable (a known limitation of FER2013 in the research literature).
 
-## مفاهیم جدید (با مثال ساده)
+## New Concepts (with a simple example)
 
-- **Precision در برابر Recall**: برای کلاس Fear، precision=۰.۴۴۶ یعنی وقتی مدل می‌گوید
-  "Fear"، ۴۴.۶٪ اوقات درست می‌گوید. recall=۰.۱۹۷ یعنی از بین تمام نمونه‌های واقعی Fear،
-  مدل فقط ۱۹.۷٪ آن‌ها را پیدا کرده (بقیه را به کلاس‌های دیگر نسبت داده). یعنی مدل در
-  تشخیص Fear هم محتاط است (کم می‌گوید Fear) و هم وقتی می‌گوید، زیاد مطمئن نیست.
-- **Macro average در برابر Weighted average**: macro average میانگین ساده‌ی f1 هفت
-  کلاس است (هر کلاس وزن یکسان دارد، حتی Disgust با ۵۵ نمونه). weighted average بر
-  اساس تعداد نمونه‌ی هر کلاس وزن‌دهی می‌کند (شبیه‌تر به accuracy کلی). فاصله‌ی این دو
-  (۰.۵۵۹ در برابر ۰.۵۹۳) نشان می‌دهد مدل روی کلاس‌های کم‌نمونه کمی ضعیف‌تر از میانگین
-  وزن‌دار عمل می‌کند.
-- **Confusion Matrix**: جدولی که نشان می‌دهد مدل کدام کلاس را به‌جای کدام کلاس دیگر
-  اشتباه گرفته. قطر اصلی = پیش‌بینی‌های درست. خارج از قطر = الگوهای اشتباه. این جدول
-  خیلی بیشتر از یک عدد accuracy به ما می‌گوید *کجا* مدل ضعیف است.
+- **Precision vs. Recall**: for the Fear class, precision=0.446 means when the model
+  says "Fear," it's right 44.6% of the time. recall=0.197 means out of all actual Fear
+  samples, the model only found 19.7% of them (attributing the rest to other classes).
+  So the model is both cautious about Fear (rarely says it) and not very confident when
+  it does.
+- **Macro average vs. Weighted average**: the macro average is the simple mean of F1
+  across the seven classes (every class weighted equally, even Disgust with 55
+  samples). The weighted average weights by each class's sample count (closer to
+  overall accuracy). The gap between the two (0.559 vs. 0.593) shows the model performs
+  somewhat worse on minority classes than the weighted average suggests.
+- **Confusion Matrix**: a table showing which class the model mistook for which other
+  class. The main diagonal = correct predictions. Off-diagonal = error patterns. This
+  table tells us far more than a single accuracy number about *where* the model is weak.
 
-## سؤالات احتمالی مصاحبه
+## Likely Interview Questions
 
-**۱. چرا فقط یک‌بار روی PrivateTest اجرا کردی، نه چندبار برای بهینه‌سازی؟**
-اگر چندبار روی test اجرا می‌کردم و بر اساس نتیجه‌اش تصمیم می‌گرفتم (مثلاً تغییر
-هایپرپارامتر)، عملاً test را به یک val دوم تبدیل می‌کردم و عدد نهایی دیگر یک برآورد
-بی‌طرف از عملکرد روی داده‌ی واقعاً جدید نبود. این دقیقاً همان دلیلی است که val/test را
-از فاز ۱ جدا نگه داشتیم.
+**1. Why did you only run on PrivateTest once, instead of multiple times to optimize?**
+If I ran on test multiple times and made decisions based on the result (e.g. changing
+hyperparameters), I would effectively be turning test into a second validation set, and
+the final number would no longer be an unbiased estimate of performance on truly new
+data. This is exactly why we kept val/test separate from Phase 1 onward.
 
-**۲. چرا Fear ضعیف‌ترین کلاس شد با وجود این‌که کم‌نمونه‌ترین کلاس نبود؟**
-چون مشکل صرفاً تعداد نمونه نیست؛ شباهت بصری بین کلاس‌ها هم مهم است. Fear در تصاویر
-سیاه‌سفید ۴۸×۴۸ با Sad, Surprise, و Neutral همپوشانی بصری زیادی دارد (مثلاً ابروهای
-بالارفته هم در Fear هم در Surprise دیده می‌شود). Confusion matrix این را مستقیم نشان
-می‌دهد: بیشترین خطای Fear به سمت همین سه کلاس است.
+**2. Why did Fear become the weakest class even though it wasn't the smallest class?**
+Because the problem isn't just sample count; visual similarity between classes matters
+too. Fear in 48x48 black-and-white images overlaps visually a lot with Sad, Surprise,
+and Neutral (e.g. raised eyebrows appear in both Fear and Surprise). The confusion
+matrix shows this directly: most of Fear's errors go toward exactly these three classes.
 
-**۳. آیا این یعنی مدل بد است؟**
-نه لزوماً — بخشی از خطاها ناشی از خود دیتاست است (برچسب‌های مشکوک/نویزی که در تحلیل
-خطا دیدیم)، و بخشی ذاتی مسئله است (حتی انسان هم گاهی نمی‌تواند Fear را از Surprise در
-یک عکس ثابت سیاه‌سفید ۴۸×۴۸ تشخیص دهد). عدد ۶۰.۶٪ باید در کنار این محدودیت‌ها خوانده
-شود، نه به‌عنوان "مدل بد کار می‌کند".
+**3. Does this mean the model is bad?**
+Not necessarily — some errors stem from the dataset itself (the suspicious/noisy labels
+we saw in error analysis), and some are inherent to the problem (even a human sometimes
+can't tell Fear from Surprise in a single still black-and-white 48x48 photo). The 60.6%
+number should be read alongside these limitations, not as "the model performs badly."
 
-**۴. چرا از classification_report به‌جای فقط accuracy استفاده کردی؟**
-چون accuracy کلی می‌تواند گمراه‌کننده باشد وقتی داده نامتوازن است. مثلاً اگر مدل همیشه
-Happy پیش‌بینی کند، هنوز حدود ۲۴٪ (نسبت Happy در test) درست می‌گوید. per-class
-precision/recall/f1 نشان می‌دهد مدل واقعاً روی هر کلاس چطور عمل می‌کند، نه فقط میانگین کلی.
+**4. Why did you use classification_report instead of just accuracy?**
+Because overall accuracy can be misleading when data is imbalanced. For example, if the
+model always predicted Happy, it would still be right about 24% of the time (Happy's
+proportion in test). Per-class precision/recall/f1 shows how the model actually
+performs on each class, not just an overall average.
 
-**۵. چطور می‌توانستی Fear را بهتر کنی؟**
-چند گزینه: augmentation قوی‌تر مخصوص کلاس‌های سخت، وزن‌دهی جداگانه (نه فقط بر اساس
-فراوانی بلکه بر اساس دشواری کلاس)، معماری عمیق‌تر با ظرفیت بیشتر برای یادگیری تمایزهای
-ظریف، یا استفاده از focal loss که به‌طور خودکار روی نمونه‌های سخت تمرکز بیشتری می‌کند.
-این‌ها خارج از محدوده‌ی زمانی این پروژه ماندند اما مسیرهای روشنی برای کار آینده هستند.
+**5. How could you have improved Fear?**
+A few options: stronger augmentation specific to hard classes, separate weighting (not
+just based on frequency but on class difficulty), a deeper architecture with more
+capacity to learn subtle distinctions, or using focal loss, which automatically focuses
+more on hard samples. These stayed outside this project's time budget but are clear
+directions for future work.
 
-## وضعیت
-فاز ۴ کامل شد. مدل نهایی: `checkpoints/best.pt`، test accuracy=۶۰.۶۰٪ روی PrivateTest.
-آماده برای فاز ۵ (برنامه‌ی زنده‌ی وب‌کم).
+## Status
+Phase 4 complete. Final model: `checkpoints/best.pt`, test accuracy=60.60% on PrivateTest.
+Ready for Phase 5 (live webcam application).

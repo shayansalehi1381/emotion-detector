@@ -1,39 +1,41 @@
-# راهنمای ضبط دموی ویدیویی
+# Demo Video Recording Guide
 
-یک ویدیوی کوتاه (۳۰-۶۰ ثانیه) از برنامه‌ی زنده، برای نشان دادن در رزومه/مصاحبه یا
-پیوست به پروژه، کافی و مؤثر است. لازم نیست طولانی باشد.
+A short video (30-60 seconds) of the live app is enough and effective for showing in a
+resume/interview or attaching to the project. It doesn't need to be long.
 
-## قبل از ضبط
+## Before Recording
 
-1. مطمئن شوید `checkpoints/best.pt` وجود دارد (خروجی فاز ۳).
-2. نور محیط را مناسب کنید — Haar Cascade در نور کم چهره را دیرتر یا ضعیف‌تر پیدا می‌کند.
-3. یک بار برنامه را اجرا کنید تا مطمئن شوید FPS و تشخیص چهره درست کار می‌کنند:
+1. Make sure `checkpoints/best.pt` exists (Phase 3's output).
+2. Set up good lighting — Haar Cascade finds faces later or more weakly in low light.
+3. Run the app once to confirm FPS and face detection work correctly:
    ```bash
    PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe src/live_demo.py
    ```
 
-## ابزار ضبط صفحه (ویندوز)
+## Screen Recording Tools (Windows)
 
-- ساده‌ترین راه: **Xbox Game Bar** (کلید `Win + G`) — روی پنجره‌ی برنامه فعال کنید،
-  دکمه‌ی ضبط را بزنید. فایل خروجی در `Videos/Captures` ذخیره می‌شود.
-- جایگزین: OBS Studio (رایگان) برای کنترل بیشتر روی کیفیت و framerate خروجی.
+- Simplest option: **Xbox Game Bar** (`Win + G`) — activate it on the app window, hit
+  the record button. Output file is saved to `Videos/Captures`.
+- Alternative: OBS Studio (free) for more control over output quality and framerate.
 
-## چه چیزی را نشان دهیم (پیشنهاد سناریو)
+## What to Show (Suggested Scenario)
 
-۱. ۳-۴ حالت متفاوت را واقعی نشان دهید (مثلاً لبخند بزنید → Happy، اخم کنید → Angry،
-   حالت خنثی → Neutral، تعجب کنید → Surprise). چون Happy و Surprise دقت بالاتری دارند
-   (طبق `docs/PHASE_4_REPORT.md`)، این دو را حتماً نشان دهید تا بهترین عملکرد مدل دیده شود.
-۲. حرکت آرام سر برای نشان دادن این‌که کادر تشخیص چهره دنبال می‌کند.
-۳. چند ثانیه صبر کنید بین تغییر حالت‌ها تا میانگین متحرک (هموارسازی) خودش را با
-   حالت جدید تطبیق دهد (حدود ۸ فریم، در FPS معمولی کمتر از یک ثانیه).
-۴. در پایان کلید `q` را بزنید تا خروج تمیز برنامه هم در ویدیو دیده شود.
+1. Genuinely show 3-4 different expressions (e.g. smile → Happy, frown → Angry,
+   neutral face → Neutral, look surprised → Surprise). Since Happy and Surprise have
+   higher accuracy (per `docs/PHASE_4_REPORT.md`), make sure to show these two so the
+   model's best performance is visible.
+2. Move your head slowly to show the face-detection box tracking.
+3. Wait a few seconds between changing expressions so the moving average (smoothing)
+   can adapt to the new expression (about 8 frames, less than a second at normal FPS).
+4. At the end, press the `q` key so the app's clean exit is also visible in the video.
 
-## بعد از ضبط
+## After Recording
 
-- ویدیو را به `results/demo.mp4` (اختیاری، در `.gitignore` هست چون فایل ویدیویی
-  می‌تواند حجیم باشد) یا مستقیم در پلتفرمی که رزومه/مصاحبه را ارائه می‌دهید آپلود کنید.
-- اگر می‌خواهید GIF کوتاه هم بسازید (برای نمایش در README گیت‌هاب)، می‌توانید از
-  ابزارهایی مثل ffmpeg تبدیل کنید:
+- Upload the video to `results/demo.mp4` (optional, it's in `.gitignore` since video
+  files can be large) or directly to whatever platform you're presenting your
+  resume/interview on.
+- If you also want to make a short GIF (to show in a GitHub README), you can convert it
+  with a tool like ffmpeg:
   ```bash
   ffmpeg -i results/demo.mp4 -vf "fps=10,scale=480:-1" results/demo.gif
   ```

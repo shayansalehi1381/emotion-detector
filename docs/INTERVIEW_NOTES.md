@@ -1,109 +1,121 @@
-# یادداشت‌های آماده‌سازی مصاحبه
+# Interview Prep Notes
 
-این فایل خلاصه‌ای از کل پروژه است تا بتوانید در چند دقیقه قبل از مصاحبه مرور کنید.
-جزئیات کامل هر بخش در گزارش‌های فاز به فاز (`docs/PHASE_*_REPORT.md`) موجود است.
+This file is a summary of the whole project so you can review it in a few minutes
+before an interview. Full details for each section are in the phase-by-phase reports
+(`docs/PHASE_*_REPORT.md`).
 
-## خلاصه‌ی پروژه در یک پاراگراف
+## Project Summary in One Paragraph
 
-یک CNN از صفر (بدون pretrained) روی دیتاست FER2013 (۳۵,۸۸۷ تصویر ۴۸×۴۸ خاکستری، ۷ کلاس
-احساسی) آموزش دادم. اول یک baseline ساده ساختم که overfit کرد (train_acc=97%،
-val_acc=57%). با اضافه کردن BatchNorm، Dropout، data augmentation، class weighting،
-LR scheduler، و early stopping، به val_accuracy=60.55% رسیدم. در این مسیر یک آزمایش
-(وزن‌دهی خام کلاس + augmentation با هم) نتیجه‌ی بدتری داد که آن را با نگاه به
-train_accuracy (که پایین مانده بود) به‌عنوان underfitting تشخیص دادم و با ملایم‌تر
-کردن وزن کلاس (جذر به‌جای نسبت خام) حل کردم. ارزیابی نهایی روی PrivateTest (که تا آن
-لحظه کاملاً دست‌نخورده بود) دقت ۶۰.۶۰٪ را تأیید کرد. در نهایت مدل را با OpenCV Haar
-Cascade برای تشخیص چهره ترکیب کردم تا یک برنامه‌ی وب‌کم زنده با نمایش حالت + درصد
-اطمینان + FPS بسازم.
+I trained a CNN from scratch (no pretrained model) on the FER2013 dataset (35,887
+48x48 grayscale images, 7 emotion classes). First I built a simple baseline that
+overfit (train_acc=97%, val_acc=57%). By adding BatchNorm, Dropout, data augmentation,
+class weighting, an LR scheduler, and early stopping, I reached val_accuracy=60.55%.
+Along the way, one experiment (raw class weighting + augmentation together) gave a
+worse result, which I diagnosed as underfitting by looking at train_accuracy (which
+had stayed low), and fixed by softening the class weight (square root instead of the
+raw ratio). Final evaluation on PrivateTest (completely untouched until that point)
+confirmed 60.60% accuracy. Finally, I combined the model with OpenCV's Haar Cascade for
+face detection to build a live webcam app showing emotion + confidence + FPS.
 
-## اعداد کلیدی (حفظ کنید)
+## Key Numbers (memorize these)
 
-| مورد | عدد |
+| Item | Number |
 |---|---|
-| تعداد کل نمونه‌ها | 35,887 |
+| Total samples | 35,887 |
 | Training / PublicTest / PrivateTest | 28,709 / 3,589 / 3,589 |
-| تعداد کلاس‌ها | 7 |
-| نسبت عدم توازن (Happy / Disgust) | ~16 برابر |
-| پارامترهای مدل نهایی | ~684K |
-| val_acc باسلاین (بدون regularization) | 56.84% |
-| val_acc مدل نهایی | 60.55% |
-| test_acc نهایی (PrivateTest) | 60.60% |
-| بهترین کلاس (F1) | Happy = 0.838 |
-| ضعیف‌ترین کلاس (F1) | Fear = 0.273 |
-| دقت انسان روی FER2013 (Goodfellow et al., 2013) | 68±5% |
-| بهترین تک‌مدل منتشرشده (بدون ensemble) | ~73.28% |
-| بهترین ensemble سنگین گزارش‌شده | ~75.8% |
+| Number of classes | 7 |
+| Imbalance ratio (Happy / Disgust) | ~16x |
+| Final model parameters | ~684K |
+| Baseline val_acc (no regularization) | 56.84% |
+| Final model val_acc | 60.55% |
+| Final test_acc (PrivateTest) | 60.60% |
+| Best class (F1) | Happy = 0.838 |
+| Weakest class (F1) | Fear = 0.273 |
+| Human accuracy on FER2013 (Goodfellow et al., 2013) | 68±5% |
+| Best published single model (no ensemble) | ~73.28% |
+| Best reported heavy ensemble | ~75.8% |
 
-> بر اساس مقاله‌ی رسمی معرفی دیتاست FER2013 (Goodfellow et al., 2013)، دقت انسان روی
-> این دیتاست ۶۸±۵٪ است (تخمین‌های دیگر در ادبیات پژوهشی بین ۶۵ تا ۶۸٪ ذکر می‌کنند).
-> بهترین مدل‌های منتشرشده‌ی دنیا (تک‌مدل، بدون ensemble) به حدود ۷۳٪ رسیده‌اند و با
-> ensemble سنگین چند مدل، بهترین نتیجه‌ی گزارش‌شده حدود ۷۵.۸٪ است. یعنی حتی تیم‌های
-> پژوهشی حرفه‌ای با منابع محاسباتی بسیار بیشتر از این پروژه، هرگز به دقتی نزدیک ۹۰٪
-> نرسیده‌اند — این محدودیت نه از ضعف مدل‌ها بلکه از دشواری ذاتی دیتاست (کیفیت پایین
-> بازیگری چهره در تصاویر و برچسب‌گذاری از طریق جستجوی تصاویر وب) ناشی می‌شود.
+> Based on the official paper introducing the FER2013 dataset (Goodfellow et al.,
+> 2013), human accuracy on this dataset is 68±5% (other estimates in the research
+> literature cite 65 to 68%). The best published models in the world (single model, no
+> ensemble) have reached about 73%, and with a heavy multi-model ensemble, the best
+> reported result is about 75.8%. That means even professional research teams with far
+> more computational resources than this project have never reached accuracy close to
+> 90% — this ceiling comes not from weak models but from the dataset's inherent
+> difficulty (low quality of posed facial expressions in the images, and labeling done
+> via web image search).
 >
-> منابع:
+> Sources:
 > - Goodfellow et al., "Challenges in Representation Learning: A report on three
->   machine learning contests" (arxiv.org/pdf/1307.0414) — دقت انسان ۶۸±۵٪
+>   machine learning contests" (arxiv.org/pdf/1307.0414) — human accuracy 68±5%
 > - "Facial Emotion Recognition: State of the Art Performance on FER2013"
->   (arxiv.org/pdf/2105.03588) — بهترین تک‌مدل ۷۳.۲۸٪
+>   (arxiv.org/pdf/2105.03588) — best single model 73.28%
 > - "Facial Expression Recognition with Deep Learning"
->   (cs230.stanford.edu/projects_winter_2020/reports/32610274.pdf) — بهترین
->   ensemble گزارش‌شده ۷۵.۸٪
+>   (cs230.stanford.edu/projects_winter_2020/reports/32610274.pdf) — best reported
+>   ensemble 75.8%
 
-## مفاهیم کلیدی که باید بتوانید توضیح دهید
+## Key Concepts You Should Be Able to Explain
 
-1. **Train/Val/Test split و چرا سه‌تایی**: val برای تنظیم مدل، test فقط یک‌بار در
-   پایان — جلوگیری از نشت غیرمستقیم اطلاعات test به فرآیند تصمیم‌گیری.
-2. **Overfitting در برابر Underfitting**: با مقایسه‌ی train_acc و val_acc تشخیص داده
-   می‌شود، نه فقط نگاه به یک عدد. Overfitting = فاصله‌ی زیاد (train بالا، val پایین).
-   Underfitting = هر دو پایین.
-3. **BatchNorm و Dropout**: BatchNorm پایداری آموزش را زیاد می‌کند (نرمال کردن ورودی
-   هر لایه)، Dropout با خاموش کردن تصادفی نورون‌ها از وابستگی بیش‌ازحد جلوگیری می‌کند.
-4. **Class imbalance و class weighting**: وزن معکوس فراوانی در loss؛ وزن خیلی تهاجمی
-   می‌تواند باعث underfitting شود (تجربه‌ی واقعی این پروژه) — جذر وزن ملایم‌تر است.
-5. **Data augmentation**: تنوع مصنوعی (flip/rotation/translation) برای کاهش overfitting؛
-   باید ملایم باشد وگرنه سیگنال اصلی تصویر (اینجا حالت چهره) را خراب می‌کند.
-6. **Precision/Recall/F1 در برابر Accuracy**: روی داده‌ی نامتوازن، accuracy می‌تواند
-   گمراه‌کننده باشد؛ باید per-class گزارش داد.
-7. **Confusion Matrix**: نشان می‌دهد مدل *کجا* اشتباه می‌کند، نه فقط *چقدر*.
-8. **سازگاری preprocessing بین train و inference**: یکی از رایج‌ترین باگ‌های عملی.
+1. **Train/Val/Test split and why three sets**: val is for tuning the model, test is
+   used only once at the end — preventing indirect leakage of test information into
+   the decision-making process.
+2. **Overfitting vs. Underfitting**: diagnosed by comparing train_acc and val_acc, not
+   by looking at just one number. Overfitting = large gap (train high, val low).
+   Underfitting = both low.
+3. **BatchNorm and Dropout**: BatchNorm increases training stability (normalizing each
+   layer's input); Dropout prevents excessive reliance on specific neurons by randomly
+   turning them off.
+4. **Class imbalance and class weighting**: inverse-frequency weighting in the loss; a
+   weight that's too aggressive can cause underfitting (a real experience from this
+   project) — a square-rooted weight is milder.
+5. **Data augmentation**: artificial variety (flip/rotation/translation) to reduce
+   overfitting; it must be mild, otherwise it destroys the image's main signal (here,
+   facial expression).
+6. **Precision/Recall/F1 vs. Accuracy**: on imbalanced data, accuracy can be
+   misleading; per-class reporting is needed.
+7. **Confusion Matrix**: shows *where* the model makes mistakes, not just *how much*.
+8. **Preprocessing consistency between train and inference**: one of the most common practical bugs.
 
-## داستان تشخیصی فاز ۳ (بهترین سؤال احتمالی مصاحبه)
+## The Phase 3 Diagnostic Story (Best Likely Interview Question)
 
-این بخش را حتماً آماده داشته باشید — نشان‌دهنده‌ی توانایی دیباگ واقعی است، نه فقط
-اجرای دستورالعمل:
+Make sure you have this section ready — it demonstrates genuine debugging ability, not
+just following instructions:
 
-> «وقتی همه‌ی تکنیک‌ها (augmentation + class weight + scheduler) را با هم اضافه
-> کردم، نتیجه از baseline هم بدتر شد (۴۸٪ به‌جای ۵۷٪). قبل از نتیجه‌گیری که این
-> تکنیک‌ها بی‌فایده‌اند، train_accuracy را چک کردم و دیدم آن هم پایین مانده (~۳۸٪) —
-> یعنی مشکل overfitting نبود، برعکس، مدل حتی روی train هم به‌خوبی یاد نمی‌گرفت
-> (underfitting). فرض کردم وزن خام کلاس Disgust (۹.۴ برابر) خیلی تهاجمی بوده و با
-> augmentation ترکیب شده و مدل را بیش‌ازحد محدود کرده. با ملایم‌تر کردن وزن (جذر
-> به‌جای نسبت خام) و دادن epoch بیشتر، نتیجه به بهترین عدد کل پروژه رسید (۶۰.۵۵٪).»
+> "When I added all the techniques together (augmentation + class weight +
+> scheduler), the result got worse than baseline (48% instead of 57%). Before
+> concluding these techniques were useless, I checked train_accuracy and saw it had
+> also stayed low (~38%) — meaning the problem wasn't overfitting, but the opposite:
+> the model wasn't even learning well on train (underfitting). I hypothesized that the
+> raw weight for the Disgust class (9.4x) had been too aggressive and, combined with
+> augmentation, over-constrained the model. By softening the weight (square root
+> instead of the raw ratio) and giving it more epochs, the result reached the best
+> number in the whole project (60.55%)."
 
-## سؤالات پرتکرار و پاسخ کوتاه
+## Frequently Asked Questions and Short Answers
 
-**چرا از پیش‌آموزش (pretrained) استفاده نکردی؟**
-محدودیت پروژه بود — هدف یادگیری کامل فرآیند train یک CNN از صفر بود، نه صرفاً fine-tune
-یک مدل آماده.
+**Why didn't you use a pretrained model?**
+It was a project constraint — the goal was to learn the full process of training a CNN
+from scratch, not just fine-tuning a ready-made model.
 
-**چرا FER2013 و نه دیتاست دیگر؟**
-یک دیتاست استاندارد و شناخته‌شده در تحقیقات تشخیص احساس است، اندازه‌ی مدیریت‌پذیر دارد،
-و در فرمت CSV با تقسیم رسمی train/val/test آماده است.
+**Why FER2013 and not another dataset?**
+It's a standard, well-known dataset in emotion recognition research, has a manageable
+size, and comes ready in CSV format with an official train/val/test split.
 
-**دقت نهایی‌ات خوب است؟**
-عدد ۶۰.۶۰٪ مدل ما، با توجه به این‌که از صفر (بدون pretrained) روی یک معماری ساده‌ی CNN
-آموزش دیده، در محدوده‌ی معقولی نسبت به دقت انسان (۶۸٪) قرار دارد، هرچند به سقف مدل‌های
-پیچیده‌تر (۷۳-۷۶٪) نرسیده است. بهترین کلاس (Happy) با F1=0.838 عالی عمل می‌کند؛
-ضعیف‌ترین (Fear) به دلیل شباهت بصری ذاتی با کلاس‌های دیگر و مقداری نویز برچسب در خود
-دیتاست، چالش‌برانگیزتر بود.
+**Is your final accuracy good?**
+Our model's 60.60% number, given that it was trained from scratch (no pretrained
+model) on a relatively simple CNN architecture, is in a reasonable range relative to
+human accuracy (68%), though it hasn't reached the ceiling of more complex models
+(73-76%). The best class (Happy) performs excellently with F1=0.838; the weakest
+(Fear) was more challenging due to inherent visual similarity to other classes and
+some label noise in the dataset itself.
 
-**اگر وقت بیشتری داشتی چه می‌کردی؟**
-معماری عمیق‌تر (مثلاً با residual connections)، augmentation قوی‌تر مخصوص کلاس‌های سخت
-(Fear)، focal loss به‌جای/علاوه‌بر class weighting، و آموزش طولانی‌تر (نمودار مدل نهایی
-نشان می‌دهد هنوز در حال بهبود تدریجی بود، هنوز کاملاً همگرا نشده بود).
+**What would you do with more time?**
+A deeper architecture (e.g. with residual connections), stronger augmentation
+targeted at hard classes (Fear), focal loss instead of/alongside class weighting, and
+longer training (the final model's chart shows it was still improving gradually, not
+yet fully converged).
 
-**چرا برای تشخیص چهره از Haar Cascade استفاده کردی نه یک شبکه‌ی عصبی؟**
-نسخه‌ی mediapipe نصب‌شده API کلاسیک را نداشت (نسخه‌ی خیلی جدیدتر بود) و نیاز به دانلود
-مدل جداگانه داشت؛ Haar Cascade بدون وابستگی اضافی و به‌اندازه‌ی کافی برای این دمو کافی بود.
+**Why did you use Haar Cascade instead of a neural network for face detection?**
+The installed mediapipe version didn't have its classic API (it was a much newer
+version) and needed a separately downloaded model; Haar Cascade, with no extra
+dependency, was good enough for this demo.

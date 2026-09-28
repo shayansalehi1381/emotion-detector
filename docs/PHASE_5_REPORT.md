@@ -1,110 +1,117 @@
-# فاز ۵ — گزارش برنامه‌ی زنده‌ی وب‌کم
+# Phase 5 — Live Webcam Application Report
 
-## چه کار کردیم و چرا
+## What we did and why
 
-هدف این فاز رساندن مدل آموزش‌دیده‌ی فاز ۳ به یک برنامه‌ی واقعی و قابل‌استفاده است:
-گرفتن فریم از وب‌کم، پیدا کردن چهره، و نمایش زنده‌ی حالت احساسی + درصد اطمینان.
-(`src/live_demo.py`)
+The goal of this phase is to bring the Phase 3 trained model into a real, usable
+application: grab a webcam frame, find the face, and display the emotion + confidence
+percentage live. (`src/live_demo.py`)
 
-### تشخیص چهره: چرا Haar Cascade به‌جای MediaPipe؟
+### Face Detection: Why Haar Cascade Instead of MediaPipe?
 
-روش برنامه‌ریزی‌شده‌ی اولیه استفاده از MediaPipe بود، اما نسخه‌ی نصب‌شده در این پروژه
-(`mediapipe==1.0.1`) یک نسخه‌ی بسیار جدیدتر است که API کلاسیک `mp.solutions.face_detection`
-(که در اکثر آموزش‌ها استفاده می‌شود) را دیگر ندارد — فقط `mediapipe.tasks` (API جدید)
-موجود است که نیاز به دانلود جداگانه‌ی فایل مدل `.task` دارد. برای ساده نگه داشتن پروژه
-و چون roadmap صراحتاً «MediaPipe یا OpenCV» را مجاز کرده بود، از **Haar Cascade در
-OpenCV** (`cv2.CascadeClassifier`) استفاده کردیم — یک روش کلاسیک و سبک تشخیص چهره.
+The original plan was to use MediaPipe, but the version installed in this project
+(`mediapipe==1.0.1`) is a much newer version that no longer has the classic
+`mp.solutions.face_detection` API (used in most tutorials) — only `mediapipe.tasks`
+(the new API) is available, which requires downloading a separate `.task` model file.
+To keep the project simple, and since the roadmap explicitly allowed "MediaPipe or
+OpenCV," we used **Haar Cascade in OpenCV** (`cv2.CascadeClassifier`) — a classic,
+lightweight face-detection method.
 
-نکته‌ی فنی دیگر: نسخه‌ی نصب‌شده‌ی `opencv-python` (۵.۰.۰) دیگر فایل‌های Haar Cascade را
-همراه پکیج توزیع نمی‌کند (بر خلاف نسخه‌های قدیمی‌تر). با اجازه‌ی صریح کاربر، فایل
-`haarcascade_frontalface_default.xml` (~930KB) از ریپوی رسمی GitHub خود OpenCV
-(`opencv/opencv`) دانلود و در `models/` ذخیره شد.
+Another technical note: the installed version of `opencv-python` (5.0.0) no longer
+ships Haar Cascade files with the package (unlike older versions). With the user's
+explicit permission, the `haarcascade_frontalface_default.xml` file (~930KB) was
+downloaded from OpenCV's own official GitHub repo (`opencv/opencv`) and saved to `models/`.
 
-### Pipeline برنامه‌ی زنده
+### Live Application Pipeline
 
-1. خواندن فریم از وب‌کم (`cv2.VideoCapture(0)`)
-2. تبدیل به grayscale و تشخیص چهره با `detectMultiScale`
-3. اگر چند چهره پیدا شد، بزرگ‌ترین را (نزدیک‌ترین به دوربین معمولاً) انتخاب می‌کنیم
-4. **preprocessing دقیقاً مثل زمان train**: resize به ۴۸×۴۸، تبدیل به تنسور، تقسیم بر
-   ۲۵۵ (نرمال به [0,1]) — هر گونه ناهماهنگی اینجا با train باعث افت شدید دقت می‌شود
-5. مدل (`EmotionCNNImproved` با وزن‌های `checkpoints/best.pt`) پیش‌بینی می‌کند
-6. **هموارسازی**: میانگین متحرک روی آخرین ۸ بردار احتمال (نه فقط روی برچسب نهایی) تا
-   نوسان فریم‌به‌فریم (مثلاً پرش بین Neutral و Sad در دو فریم متوالی) کاهش پیدا کند
-7. نمایش کادر دور چهره + برچسب حالت + درصد اطمینان + FPS روی تصویر
-8. خروج تمیز با کلید `q`
+1. Read a frame from the webcam (`cv2.VideoCapture(0)`)
+2. Convert to grayscale and detect faces with `detectMultiScale`
+3. If multiple faces are found, pick the largest one (usually the closest to the camera)
+4. **Preprocessing exactly like train time**: resize to 48x48, convert to a tensor,
+   divide by 255 (normalize to [0,1]) — any mismatch here with train causes a sharp
+   drop in accuracy
+5. The model (`EmotionCNNImproved` with `checkpoints/best.pt` weights) predicts
+6. **Smoothing**: a moving average over the last 8 probability vectors (not just the
+   final label) to reduce frame-to-frame jitter (e.g. flickering between Neutral and
+   Sad across consecutive frames)
+7. Display a box around the face + emotion label + confidence percentage + FPS on screen
+8. Clean exit with the `q` key
 
-### چرا میانگین متحرک روی probability به‌جای روی label؟
+### Why a Moving Average Over Probability Instead of Over the Label?
 
-اگر فقط آخرین N برچسب (label) را رأی‌گیری کنیم، اطلاعات "چقدر مطمئن بود" از دست می‌رود.
-میانگین‌گیری روی بردار احتمال (قبل از argmax) باعث می‌شود اگر مدل در یک فریم کمی نامطمئن
-بین دو کلاس نزدیک به هم نوسان کند، خروجی نهایی نرم‌تر و پایدارتر باشد، نه این‌که هر فریم
-یک‌دفعه بین دو برچسب کاملاً متفاوت بپرد.
+If we only voted over the last N labels, information about "how confident it was" would
+be lost. Averaging over the probability vector (before argmax) means that if the model
+is slightly unsure between two close classes in one frame, the final output is smoother
+and more stable, rather than each frame suddenly jumping between two completely
+different labels.
 
-## نتایج واقعی و محدودیت تست
+## Real Results and Testing Limitation
 
-اسکریپت روی همین سیستم اجرا و تأیید شد:
-- وب‌کم با موفقیت باز شد و فریم واقعی خواند (`640x480`)
-- Haar Cascade چهره‌ی واقعی مقابل دوربین را با موفقیت پیدا کرد
-  (نمونه: `faces found: [[179 370 96 96]]`)
-- اسکریپت کامل به مدت چند ثانیه بدون خطا یا traceback اجرا شد (حافظه و CPU مصرف‌شده
-  نشان‌دهنده‌ی اجرای واقعی حلقه‌ی inference بود)
+The script was run and confirmed on this same system:
+- The webcam opened successfully and read a real frame (`640x480`)
+- Haar Cascade successfully found a real face in front of the camera
+  (example: `faces found: [[179 370 96 96]]`)
+- The full script ran for several seconds with no error or traceback (memory and CPU
+  usage confirmed the inference loop was actually running)
 
-**محدودیت صادقانه**: چون این محیط اجرای من یک پنجره‌ی گرافیکی زنده ندارد که بتوانم
-مستقیم ببینم، **تأیید بصری نهایی** (که کادر/برچسب/FPS درست روی تصویر نمایش داده
-می‌شوند، رنگ‌ها خوانا هستند، و هموارسازی واقعاً لرزش را کم می‌کند) باید توسط خود کاربر
-با اجرای مستقیم دستور زیر انجام شود:
+**Honest limitation**: since my execution environment has no live graphical window I
+can view directly, **final visual confirmation** (that the box/label/FPS display
+correctly on screen, colors are legible, and smoothing genuinely reduces jitter) must
+be done by the user themselves by running the command below directly:
 
 ```bash
 .venv/Scripts/python.exe src/live_demo.py
 ```
 
-## مفاهیم جدید (با مثال ساده)
+## New Concepts (with a simple example)
 
-- **Haar Cascade**: یک روش کلاسیک (قبل از دوران یادگیری عمیق) تشخیص چهره که بر اساس
-  الگوهای ساده‌ی روشنایی/تاریکی (مثل این‌که ناحیه‌ی چشم‌ها معمولاً تیره‌تر از گونه‌هاست)
-  کار می‌کند. سریع و سبک است (مناسب real-time روی CPU) ولی دقت آن از مدل‌های یادگیری
-  عمیق جدیدتر (مثل MediaPipe) کمتر است، خصوصاً در زوایای غیرجلویی صورت.
-- **Moving Average (میانگین متحرک) برای هموارسازی**: تصور کنید دمای هوا را هر ثانیه
-  اندازه می‌گیرید و عدد کمی نوسان دارد (نویز حسگر). اگر میانگین آخرین ۸ اندازه‌گیری را
-  نشان دهید به‌جای عدد لحظه‌ای، نمایش خیلی نرم‌تر و قابل‌خواندن‌تر می‌شود — همین اصل
-  اینجا روی بردار احتمال هفت‌کلاسه‌ی مدل اعمال شده.
-- **سازگاری preprocessing بین train و inference**: یکی از رایج‌ترین باگ‌های عملی در
-  یادگیری ماشین این است که preprocessing زمان استفاده‌ی واقعی (inference) با زمان
-  آموزش (train) فرق کند (مثلاً یکی نرمال به [0,1] و دیگری نرمال با mean/std متفاوت).
-  حتی یک تفاوت کوچک می‌تواند دقت مدل را به‌شدت کاهش دهد، چون مدل روی توزیع متفاوتی از
-  آنچه یاد گرفته می‌بیند.
+- **Haar Cascade**: a classic (pre-deep-learning-era) face detection method based on
+  simple light/dark patterns (e.g. the eye region is usually darker than the cheeks).
+  Fast and lightweight (suited to real-time on CPU) but less accurate than newer deep
+  learning models (like MediaPipe), especially at non-frontal face angles.
+- **Moving Average for smoothing**: imagine measuring air temperature every second and
+  the number has some jitter (sensor noise). If you display the average of the last 8
+  measurements instead of the instantaneous number, the display becomes much smoother
+  and more readable — the same principle applied here to the model's seven-class
+  probability vector.
+- **Preprocessing consistency between train and inference**: one of the most common
+  practical bugs in machine learning is when preprocessing at actual use time
+  (inference) differs from train time (e.g. one normalizes to [0,1] while the other
+  normalizes with a different mean/std). Even a small difference can sharply reduce
+  model accuracy, because the model sees a distribution different from what it learned.
 
-## سؤالات احتمالی مصاحبه
+## Likely Interview Questions
 
-**۱. چرا preprocessing زمان inference باید دقیقاً مثل زمان train باشد؟**
-مدل در طول آموزش یاد گرفته با ورودی‌هایی با توزیع خاص (اینجا: پیکسل‌های نرمال‌شده به
-[0,1]) کار کند. اگر در inference همین نرمال‌سازی رعایت نشود (مثلاً پیکسل خام ۰-۲۵۵ داده
-شود)، ورودی از دید مدل کاملاً خارج از توزیعی است که دیده، و پیش‌بینی‌ها عملاً بی‌معنی
-می‌شوند، حتی اگر مدل خودش عالی آموزش دیده باشد.
+**1. Why must inference-time preprocessing exactly match train-time preprocessing?**
+During training, the model learned to work with inputs from a specific distribution
+(here: pixels normalized to [0,1]). If this same normalization isn't applied at
+inference (e.g. raw 0-255 pixels are given instead), the input is completely out of the
+distribution the model has ever seen, from its point of view, and predictions become
+essentially meaningless, even if the model itself was trained excellently.
 
-**۲. چرا فقط بزرگ‌ترین چهره را انتخاب کردی، نه همه‌ی چهره‌ها؟**
-برای این برنامه‌ی دموی ساده، فرض بر این است که یک کاربر اصلی مقابل دوربین است.
-بزرگ‌ترین چهره معمولاً نزدیک‌ترین فرد به دوربین (یعنی کاربر اصلی) است. برای
-چندنفره‌کردن، کافی است حلقه‌ی پیش‌بینی را روی تمام چهره‌های تشخیص‌داده‌شده تکرار کنیم
-(معماری کد از قبل این تغییر را آسان می‌کند).
+**2. Why did you only pick the largest face, not all faces?**
+For this simple demo app, the assumption is that there's one main user in front of the
+camera. The largest face is usually the person closest to the camera (i.e. the main
+user). To support multiple people, it would be enough to loop the prediction over every
+detected face (the code's structure already makes this change easy).
 
-**۳. چرا از میانگین متحرک ساده استفاده کردی، نه چیز پیچیده‌تر مثل فیلتر کالمن؟**
-میانگین متحرک ساده (روی آخرین ۸ فریم) برای این کاربرد کافی بود: هزینه‌ی محاسباتی
-ناچیز دارد و به‌وضوح لرزش فریم‌به‌فریم را کم می‌کند. فیلتر کالمن برای مسائلی مفیدتر است
-که یک مدل حرکتی زیرین دارند (مثل ردیابی موقعیت)؛ اینجا فقط می‌خواهیم نویز آماری را کم
-کنیم، نه یک کمیت پیوسته را دنبال کنیم.
+**3. Why did you use a simple moving average instead of something more sophisticated like a Kalman filter?**
+A simple moving average (over the last 8 frames) was sufficient for this use case: it
+has negligible computational cost and clearly reduces frame-to-frame jitter. A Kalman
+filter is more useful for problems with an underlying motion model (like position
+tracking); here we just want to reduce statistical noise, not track a continuous quantity.
 
-**۴. اگر چند نفر هم‌زمان مقابل دوربین باشند، هموارسازی خراب نمی‌شود؟**
-با پیاده‌سازی فعلی (تک `deque` سراسری برای بزرگ‌ترین چهره)، بله — اگر چهره‌ی اصلی
-عوض شود (مثلاً شخص دیگری جلوتر بیاید)، میانگین متحرک برای چند فریم بین دو نفر مخلوط
-می‌شود. راه‌حل درست‌تر: یک `deque` جداگانه به ازای هر ردیابی چهره (face tracking با ID)،
-که خارج از محدوده‌ی این فاز ساده نگه داشته شد.
+**4. If several people are in front of the camera at once, doesn't the smoothing break?**
+With the current implementation (a single global `deque` for the largest face), yes —
+if the main face changes (e.g. someone else steps forward), the moving average mixes
+between the two people for a few frames. The more correct fix: a separate `deque` per
+tracked face (face tracking with an ID), which was kept out of scope for this simple phase.
 
-**۵. چرا از Haar Cascade به‌جای یک شبکه‌ی عصبی برای تشخیص چهره استفاده کردی؟**
-عمدتاً به‌خاطر یک مشکل عملی: نسخه‌ی نصب‌شده‌ی mediapipe در این پروژه API کلاسیک خود را
-نداشت و نیاز به دانلود جداگانه‌ی مدل داشت. Haar Cascade بدون هیچ وابستگی اضافی، سریع،
-و برای یک دمو با نورپردازی معمولی و چهره‌ی رو-به-دوربین کاملاً کافی بود.
+**5. Why did you use Haar Cascade instead of a neural network for face detection?**
+Mainly for a practical reason: the mediapipe version installed in this project didn't
+have its classic API and required a separately downloaded model. Haar Cascade, with no
+extra dependency, fast, and good enough for a demo with normal lighting and a
+front-facing face, was completely sufficient.
 
-## وضعیت
-فاز ۵ کامل شد (با تست خودکار موفق؛ تأیید بصری نهایی در دست کاربر است).
-آماده برای فاز ۶ (مستندسازی نهایی).
+## Status
+Phase 5 complete (automated testing succeeded; final visual confirmation is up to the user).
+Ready for Phase 6 (final documentation).

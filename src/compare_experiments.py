@@ -1,12 +1,12 @@
 """
-جدول و نمودار نهایی مقایسه‌ی همه‌ی آزمایش‌های فاز ۳ (از روی فایل‌های لاگ CSV در results/).
-خروجی: results/experiments_comparison.csv و results/experiments_comparison.png
+Final table and chart comparing all Phase 3 experiments (from the CSV log files in results/).
+Output: results/experiments_comparison.csv and results/experiments_comparison.png
 """
 
 import matplotlib.pyplot as plt
 import pandas as pd
 
-# نام فایل لاگ -> (عنوان خوانا، توضیح کوتاه)
+# log filename -> (readable title, short description)
 EXPERIMENTS = {
     "results/train_log_baseline.csv": "baseline",
     "results/train_log_bn_dropout.csv": "+BatchNorm+Dropout",
@@ -41,4 +41,4 @@ for bar, val in zip(bars, result_df["best_val_acc"]):
 
 fig.tight_layout()
 fig.savefig("results/experiments_comparison.png", dpi=120)
-print("\nنمودار ذخیره شد در results/experiments_comparison.png")
+print("\nChart saved to results/experiments_comparison.png")
