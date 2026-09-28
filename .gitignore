@@ -24,3 +24,7 @@ Thumbs.db
 
 # logs
 *.log
+
+# دموی ویدیویی ضبط‌شده (حجیم است)
+results/*.mp4
+results/*.gif
