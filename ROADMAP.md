@@ -22,12 +22,12 @@
 - [x] `docs/PHASE_1_REPORT.md`
 
 ## فاز ۲ — مدل پایه
-- [ ] `src/model.py`: یک CNN ساده از صفر
-- [ ] تست overfit روی یک batch کوچک (اطمینان از صحت pipeline)
-- [ ] `src/train.py` با لاگ‌گیری (loss/accuracy هر epoch)
-- [ ] اجرای اول train کامل
-- [ ] نمودار loss و accuracy (train/val) در `results/`
-- [ ] `docs/PHASE_2_REPORT.md`
+- [x] `src/model.py`: یک CNN ساده از صفر (۶۸۳,۵۲۷ پارامتر)
+- [x] تست overfit روی یک batch کوچک (`src/overfit_test.py` — موفق، ۱۰۰٪ روی batch)
+- [x] `src/train.py` با لاگ‌گیری (loss/accuracy هر epoch)
+- [x] اجرای اول train کامل (۳۰ epoch، بهترین val_acc=56.84% در epoch 11)
+- [x] نمودار loss و accuracy (train/val) در `results/baseline_curves.png`
+- [x] `docs/PHASE_2_REPORT.md`
 
 ## فاز ۳ — بهبود مدل
 - [ ] افزودن BatchNorm
@@ -61,4 +61,4 @@
 - [ ] راهنمای ضبط دمو (چگونه یک ویدیو کوتاه از برنامه‌ی زنده ضبط شود)
 
 ## وضعیت فعلی
-فاز ۱ کامل شد. در حال شروع فاز ۲ (مدل پایه).
+فاز ۲ کامل شد (baseline val_acc=56.84%). در حال شروع فاز ۳ (بهبود مدل).
