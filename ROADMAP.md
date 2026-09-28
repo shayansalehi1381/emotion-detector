@@ -41,11 +41,11 @@
 - [x] `docs/PHASE_3_REPORT.md`
 
 ## فاز ۴ — ارزیابی
-- [ ] ارزیابی نهایی روی PrivateTest (test set)
-- [ ] Confusion matrix در `results/`
-- [ ] Precision/Recall/F1 به تفکیک کلاس
-- [ ] تحلیل خطاها با نمونه عکس‌های اشتباه طبقه‌بندی‌شده
-- [ ] `docs/PHASE_4_REPORT.md`
+- [x] ارزیابی نهایی روی PrivateTest (test set) — test accuracy=60.60%
+- [x] Confusion matrix در `results/confusion_matrix.png`
+- [x] Precision/Recall/F1 به تفکیک کلاس در `results/classification_report.txt`
+- [x] تحلیل خطاها با نمونه عکس‌های اشتباه طبقه‌بندی‌شده در `results/error_analysis.png`
+- [x] `docs/PHASE_4_REPORT.md`
 
 ## فاز ۵ — برنامه‌ی زنده
 - [ ] تشخیص چهره با MediaPipe یا OpenCV (Haar/DNN) روی فریم وب‌کم
@@ -61,4 +61,4 @@
 - [ ] راهنمای ضبط دمو (چگونه یک ویدیو کوتاه از برنامه‌ی زنده ضبط شود)
 
 ## وضعیت فعلی
-فاز ۳ کامل شد (بهترین val_acc=60.55% با checkpoints/best.pt). در حال شروع فاز ۴ (ارزیابی).
+فاز ۴ کامل شد (test_acc=60.60% روی PrivateTest). در حال شروع فاز ۵ (برنامه‌ی زنده).
